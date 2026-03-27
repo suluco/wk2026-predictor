@@ -4,98 +4,76 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
-# ── Constanten ────────────────────────────────────────────────────────────────
-
-# Hoe snel het model leert van nieuwe uitslagen (0 = niets, 1 = alles)
 LEARNING_RATE = 0.08
-
-# Hoe zwaar weegt een WK-wedstrijd vs historische data
-WC_WEIGHT = 1.5
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-def expected_goals(attack: float, defense: float) -> float:
-    return attack * defense
+WC_WEIGHT     = 1.5
 
 def update_team(team: pd.Series, scored: int, conceded: int, weight: float = 1.0) -> pd.Series:
-    """
-    Pas attack en defense van een team aan op basis van werkelijke uitslag.
-
-    Logica:
-      - Meer goals dan verwacht → attack omhoog, tegenstander defense omhoog
-      - Minder goals dan verwacht → attack omlaag
-      - Gewicht bepaalt hoe hard de update is (WK-wedstrijden wegen zwaarder)
-    """
     team = team.copy()
 
-    exp_scored    = team["attack"] * 1.05   # proxy: verwacht vs gemiddelde verdediging
-    exp_conceded  = team["defense"] * 1.05
+    exp_scored   = team["attack"] * 1.05
+    exp_conceded = team["defense"] * 1.05
 
-    # Attack update
     attack_delta  = (scored - exp_scored) / exp_scored
     team["attack"] = max(0.4, team["attack"] + LEARNING_RATE * weight * attack_delta * team["attack"])
 
-    # Defense update (lager = beter)
     defense_delta = (conceded - exp_conceded) / exp_conceded
     team["defense"] = max(0.5, team["defense"] + LEARNING_RATE * weight * defense_delta * team["defense"])
 
-    # Vorm update: gewogen gemiddelde van oude vorm + match resultaat
     if scored > conceded:
-        match_form = 1.0    # gewonnen
+        match_form = 1.0
     elif scored == conceded:
-        match_form = 0.5    # gelijkspel
+        match_form = 0.5
     else:
-        match_form = 0.0    # verloren
+        match_form = 0.0
 
-    team["form"] = round(0.7 * team["form"] + 0.3 * match_form, 4)
-
-    # Afronden
+    team["form"]    = round(0.7 * team["form"] + 0.3 * match_form, 4)
     team["attack"]  = round(team["attack"], 4)
     team["defense"] = round(team["defense"], 4)
-
     return team
 
-# ── Hoofd update functie ──────────────────────────────────────────────────────
+def update_elo(home: str, away: str, home_score: int, away_score: int):
+    """Update elo_ratings.csv na een gespeelde wedstrijd."""
+    from engine.elo import load_elo, update_elo as elo_update, result_to_score, K_FACTOR
 
-def apply_result(
-    teams_df: pd.DataFrame,
-    home: str,
-    away: str,
-    home_score: int,
-    away_score: int
-) -> pd.DataFrame:
-    """
-    Verwerk een gespeelde uitslag en update beide teams in de dataframe.
-    Sla de bijgewerkte data op naar teams.csv.
-    """
+    elo = load_elo()
+
+    elo_h = elo.get(home, 1500)
+    elo_a = elo.get(away, 1500)
+    score = result_to_score(home_score, away_score)
+
+    new_h, new_a = elo_update(elo_h, elo_a, score, k=K_FACTOR)
+    elo[home] = new_h
+    elo[away] = new_a
+
+    # Opslaan
+    rows = [{"team": t, "elo": e} for t, e in sorted(elo.items(), key=lambda x: -x[1])]
+    pd.DataFrame(rows).to_csv(DATA_DIR / "elo_ratings.csv", index=False)
+    print(f"  Elo {home}: {elo_h} → {new_h}")
+    print(f"  Elo {away}: {elo_a} → {new_a}")
+
+def apply_result(teams_df, home, away, home_score, away_score):
     teams_df = teams_df.copy()
 
     if home in teams_df.index:
-        teams_df.loc[home] = update_team(
-            teams_df.loc[home], home_score, away_score, weight=WC_WEIGHT
-        )
-
+        teams_df.loc[home] = update_team(teams_df.loc[home], home_score, away_score, weight=WC_WEIGHT)
     if away in teams_df.index:
-        teams_df.loc[away] = update_team(
-            teams_df.loc[away], away_score, home_score, weight=WC_WEIGHT
-        )
+        teams_df.loc[away] = update_team(teams_df.loc[away], away_score, home_score, weight=WC_WEIGHT)
 
-    # Opslaan
     teams_df.to_csv(DATA_DIR / "teams.csv")
-    print(f"✓ Update verwerkt: {home} {home_score}–{away_score} {away}")
-    print(f"  {home}: attack={teams_df.loc[home]['attack']}, defense={teams_df.loc[home]['defense']}, form={teams_df.loc[home]['form']}")
-    if away in teams_df.index:
-        print(f"  {away}: attack={teams_df.loc[away]['attack']}, defense={teams_df.loc[away]['defense']}, form={teams_df.loc[away]['form']}")
-
+    print(f"✓ Teamsterktes bijgewerkt: {home} {home_score}–{away_score} {away}")
     return teams_df
-
-# ── Matches.csv updaten ───────────────────────────────────────────────────────
 
 def record_result(match_id: int, home_score: int, away_score: int):
     """
-    Schrijf de uitslag terug naar matches.csv en update teamsterktes.
+    Verwerk een gespeelde uitslag:
+    1. Schrijf naar matches.csv
+    2. Update teamsterktes (attack/defense/form)
+    3. Update Elo-ratings
+    4. Hertraineer ML-model
     """
     from engine.simulator import load_teams
+    from engine.features import build_training_data
+    from engine.ml_model import train
 
     matches_df = pd.read_csv(DATA_DIR / "matches.csv")
     teams_df   = load_teams()
@@ -105,37 +83,29 @@ def record_result(match_id: int, home_score: int, away_score: int):
         print(f"✗ match_id {match_id} niet gevonden")
         return
 
-    row = matches_df[mask].iloc[0]
+    row  = matches_df[mask].iloc[0]
     home = row["home"]
     away = row["away"]
 
-    # Update matches.csv
+    # 1. matches.csv updaten
     matches_df.loc[mask, "home_score"] = home_score
     matches_df.loc[mask, "away_score"] = away_score
     matches_df.loc[mask, "played"]     = 1
     matches_df.to_csv(DATA_DIR / "matches.csv", index=False)
+    print(f"\n✓ Uitslag opgeslagen: {home} {home_score}–{away_score} {away}")
 
-    # Update teamsterktes
+    # 2. Teamsterktes updaten
     apply_result(teams_df, home, away, home_score, away_score)
 
-# ── Test ──────────────────────────────────────────────────────────────────────
+    # 3. Elo updaten
+    print("✓ Elo bijwerken...")
+    update_elo(home, away, home_score, away_score)
 
-if __name__ == "__main__":
-    from engine.simulator import load_teams, simulate_match
-
-    df = load_teams()
-
-    print("VOOR update:")
-    print(f"  France  → attack={df.loc['France','attack']}, defense={df.loc['France','defense']}, form={df.loc['France','form']}")
-    print(f"  Senegal → attack={df.loc['Senegal','attack']}, defense={df.loc['Senegal','defense']}, form={df.loc['Senegal','form']}")
-
-    # Simuleer: France wint met 3-0 van Senegal
-    df_updated = apply_result(df, "France", "Senegal", 3, 0)
-
-    print("\nNA update (France 3–0 Senegal):")
-    print(f"  France  → attack={df_updated.loc['France','attack']}, defense={df_updated.loc['France','defense']}, form={df_updated.loc['France','form']}")
-    print(f"  Senegal → attack={df_updated.loc['Senegal','attack']}, defense={df_updated.loc['Senegal','defense']}, form={df_updated.loc['Senegal','form']}")
-
-    # Reset (zodat de test de CSV niet permanent aanpast)
-    df.to_csv(DATA_DIR / "teams.csv")
-    print("\n✓ teams.csv teruggezet naar origineel")
+    # 4. ML-model hertrainen op nieuwe data
+    print("✓ ML-model hertrainen...")
+    try:
+        df = build_training_data()
+        train(df)
+        print("✓ Model bijgewerkt")
+    except Exception as e:
+        print(f"  Model hertraining overgeslagen: {e}")

@@ -62,7 +62,7 @@ def get_resources():
 st.markdown('<h1 style="font-size:2.8rem;margin-bottom:0">⚽ WK 2026 VOORSPELLER</h1>', unsafe_allow_html=True)
 st.markdown('<p class="muted" style="margin-top:0">Poisson Monte Carlo · XGBoost ML · Elo · H2H · Bayesiaanse updates</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["WEDSTRIJD VOORSPELLEN", "ALLE WEDSTRIJDEN", "UITSLAG INVOEREN"])
+tab1, tab2, tab3, tab4 = st.tabs(["WEDSTRIJD VOORSPELLEN", "ALLE WEDSTRIJDEN", "UITSLAG INVOEREN", "TOERNOOI BRACKET"])
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — Wedstrijd voorspellen
@@ -250,3 +250,67 @@ with tab3:
             st.cache_resource.clear()
             st.success(f"✓ {sel_row['home']} {home_score}–{away_score} {sel_row['away']} opgeslagen. Elo en teamsterktes bijgewerkt.")
             st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 4 — Toernooi bracket
+# ══════════════════════════════════════════════════════════════════════════════
+with tab4:
+    st.markdown("#### TOERNOOI VOORSPELLING")
+    st.markdown('<p class="muted">Simuleert het volledige toernooi op basis van huidige teamsterktes en Elo-ratings.</p>', unsafe_allow_html=True)
+
+    st.info("⚠️ Bracket wordt berekend op basis van Elo-ranking voor ongespeelde groepswedstrijden. Hoe meer uitslagen je invoert, hoe accurater de bracket.")
+
+    if st.button("🏆 SIMULEER VOLLEDIG TOERNOOI"):
+        from engine.bracket import predict_bracket
+
+        with st.spinner("Toernooi simuleren... (dit duurt ~30 seconden)"):
+            resources = get_resources()
+            bracket   = predict_bracket(resources)
+
+        # Visualisatie
+        rounds = [
+            ("Round of 32",  bracket["r32"],  4),
+            ("Round of 16",  bracket["r16"],  3),
+            ("Kwartfinales", bracket["qf"],   2),
+            ("Halve finales",bracket["sf"],   1),
+        ]
+
+        for round_name, teams, _ in rounds:
+            st.markdown(f"**{round_name}**")
+            cols = st.columns(min(len(teams), 8))
+            for i, team in enumerate(teams):
+                with cols[i % len(cols)]:
+                    f = flag(team)
+                    st.markdown(f"""
+                    <div style="background:var(--card);border:1px solid var(--border);
+                    border-radius:6px;padding:.4rem .6rem;text-align:center;margin:.2rem 0;font-size:.85rem">
+                        {f} {team}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # Finalisten
+        st.markdown("---")
+        fa, fb = bracket["finalist_a"], bracket["finalist_b"]
+        champ  = bracket["champion"]
+        third  = bracket["third"]
+
+        st.markdown(f"""
+        <div class="result-box" style="margin-top:1rem">
+            <div class="muted">voorspelde finale</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:2rem;margin:.8rem 0">
+                <div>
+                    <div style="font-size:2.5rem">{flag(fa)}</div>
+                    <div style="font-family:'Bebas Neue';font-size:1rem">{fa}</div>
+                </div>
+                <div style="font-family:'Bebas Neue';font-size:1.5rem;color:var(--muted)">VS</div>
+                <div>
+                    <div style="font-size:2.5rem">{flag(fb)}</div>
+                    <div style="font-family:'Bebas Neue';font-size:1rem">{fb}</div>
+                </div>
+            </div>
+            <div style="font-family:'Bebas Neue';font-size:2rem;color:var(--green)">
+                🏆 {flag(champ)} {champ}
+            </div>
+            <div class="muted" style="margin-top:.5rem">🥉 Derde plaats: {flag(third)} {third}</div>
+        </div>
+        """, unsafe_allow_html=True)
