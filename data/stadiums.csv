@@ -1,0 +1,13 @@
+match_id_range,city,stadium,lat,lon,altitude_m,timezone,avg_temp_june,avg_humidity_june,confederation_home
+1-9,Mexico City,Estadio Azteca,19.3029,-99.1505,2240,America/Mexico_City,19,50,CONCACAF
+10-18,Guadalajara,Estadio Akron,20.6892,-103.4667,1566,America/Mexico_City,22,55,CONCACAF
+19-27,Monterrey,Estadio BBVA,25.6694,-100.3100,538,America/Mexico_City,30,60,CONCACAF
+28-36,Dallas,AT&T Stadium,32.7473,-97.0945,169,America/Chicago,34,65,CONCACAF
+37-45,Los Angeles,SoFi Stadium,33.9535,-118.3392,89,America/Los_Angeles,26,70,CONCACAF
+46-54,San Francisco,Levi's Stadium,37.4032,-121.9698,7,America/Los_Angeles,18,75,CONCACAF
+55-63,Seattle,Lumen Field,47.5952,-122.3316,5,America/Los_Angeles,18,70,CONCACAF
+64-72,Vancouver,BC Place,49.2767,-123.1122,5,America/Vancouver,18,65,CONCACAF
+73-81,Kansas City,Arrowhead Stadium,39.0489,-94.4839,316,America/Chicago,30,70,CONCACAF
+82-90,Atlanta,Mercedes-Benz Stadium,33.7554,-84.4010,298,America/New_York,30,75,CONCACAF
+91-99,Miami,Hard Rock Stadium,25.9580,-80.2389,3,America/New_York,32,80,CONCACAF
+100-104,New York,MetLife Stadium,40.8135,-74.0745,5,America/New_York,26,65,CONCACAF

@@ -13,10 +13,20 @@ MODEL_PATH  = MODEL_DIR / "model.pkl"
 SCALER_PATH = MODEL_DIR / "scaler.pkl"
 
 FEATURE_COLS = [
+    # Elo
     "elo_diff", "elo_win_prob_a", "elo_draw_prob",
+    # Team stats
     "attack_diff", "defense_diff", "form_diff",
     "wc_exp_diff", "lambda_a", "lambda_b", "lambda_diff",
+    # Confederatie
     "same_conf",
+    # Squad
+    "squad_score_diff", "squad_rating_diff", "ucl_players_diff",
+    "star_player_diff", "coach_rating_diff", "age_factor_diff",
+    # Klimaat
+    "climate_adv_diff", "alt_penalty", "heat_penalty",
+    # Vermoeidheid
+    "days_rest_diff", "travel_km_diff", "jetlag_diff", "fatigue_diff",
 ]
 
 # ── Trainen ───────────────────────────────────────────────────────────────────
@@ -175,6 +185,14 @@ if __name__ == "__main__":
     from engine.elo import load_elo
     from engine.h2h import load_h2h
     from engine.simulator import load_teams
+    from engine.climate import load_stadiums
+    import pandas as pd
+
+    elo_dict    = load_elo()
+    h2h_df      = load_h2h()
+    teams_df    = load_teams()
+    stadiums_df = load_stadiums()
+    matches_df  = pd.read_csv("data/matches.csv")
 
     # Train
     df = build_training_data()
@@ -182,20 +200,20 @@ if __name__ == "__main__":
     print_feature_importance(model, scaler)
 
     # Test voorspellingen
-    elo_dict = load_elo()
-    h2h_df   = load_h2h()
-    teams_df = load_teams()
-
     test_matches = [
-        ("Netherlands", "Argentina"),
-        ("France",      "Brazil"),
-        ("Germany",     "Spain"),
-        ("England",     "Morocco"),
+        ("Netherlands", "Argentina", 10, "2026-06-14"),
+        ("France",      "Brazil",    17, "2026-06-16"),
+        ("Germany",     "Spain",     9,  "2026-06-14"),
+        ("England",     "Morocco",   22, "2026-06-17"),
     ]
 
     print("\n── ML Voorspellingen ──────────────────────────────────")
-    for a, b in test_matches:
-        feats = build_features(a, b, elo_dict, h2h_df, teams_df)
+    for a, b, mid, date in test_matches:
+        feats = build_features(
+            a, b, elo_dict, h2h_df, teams_df,
+            match_id=mid, match_date=date,
+            matches_df=matches_df, stadiums_df=stadiums_df,
+        )
         arr   = features_to_array(feats)
         probs = predict_proba(arr, model, scaler)
         print(f"\n  {a} vs {b}")
