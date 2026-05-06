@@ -11,56 +11,64 @@ BASE_ELO    = 1500   # Startrating voor elk team
 K_FACTOR    = 40     # Hoe snel Elo verandert (WK-wedstrijden wegen zwaar)
 HOME_BONUS  = 0      # Neutraal veld op WK, dus 0
 
-# Initiële Elo-ratings gebaseerd op FIFA-ranking + historische prestaties
+# Elo-ratings per maart 2026 — gebaseerd op WK2022 uitslag, Copa America 2024,
+# Euro 2024 en recente kwalificatieresultaten. Dit is de beginstand van het toernooi.
+# Wordt bijgewerkt via elo_ratings.csv na elke gespeelde WK 2026 wedstrijd.
 INITIAL_ELO = {
-    "Argentina":    1950,
-    "France":       1940,
-    "England":      1880,
-    "Belgium":      1860,
-    "Brazil":       1930,
-    "Portugal":     1900,
-    "Netherlands":  1870,
-    "Spain":        1910,
-    "Morocco":      1780,
-    "Germany":      1890,
-    "Colombia":     1800,
-    "Uruguay":      1820,
-    "Croatia":      1790,
-    "Japan":        1740,
-    "Senegal":      1730,
-    "USA":          1760,
-    "Mexico":       1770,
-    "Switzerland":  1760,
-    "Iran":         1680,
-    "South Korea":  1720,
-    "Ecuador":      1700,
-    "Canada":       1720,
-    "Norway":       1770,
-    "Austria":      1730,
-    "Algeria":      1680,
-    "Australia":    1660,
-    "Qatar":        1580,
-    "Ivory Coast":  1710,
-    "Egypt":        1670,
-    "Scotland":     1700,
-    "Tunisia":      1640,
-    "Paraguay":     1670,
-    "South Africa": 1640,
-    "New Zealand":  1580,
-    "Ghana":        1650,
-    "Uzbekistan":   1610,
-    "Bolivia":      1580,
-    "Panama":       1600,
-    "Jordan":       1580,
-    "Saudi Arabia": 1620,
-    "Cape Verde":   1620,
-    "Haiti":        1540,
-    "Curaçao":      1520,
-    "Iraq":         1590,
-    "Jamaica":      1570,
-    "DR Congo":     1600,
-    "Suriname":     1540,
-    "New Caledonia":1440,
+    # Top tier — WK/continental titels 2022-2025
+    "Argentina":    2000,  # WK2022 + Copa America 2024 + 45-wedstrijden ongeslagen
+    "Spain":        1970,  # Euro 2024 + Nations League finalist
+    "France":       1950,  # WK2022 runner-up + EK2024 SF
+    "England":      1920,  # Euro 2024 finalist
+    "Brazil":       1930,  # consistent top-5, Copa2024 QF
+    "Portugal":     1910,  # Nations League 2024/25, Nations League + WK-kwalificatie top
+    "Netherlands":  1900,  # EK2024 SF, sterk in kwalificatie
+    "Germany":      1880,  # Euro2024 QF als gastland, solide WK-kwalificatie
+    "Belgium":      1860,  # Nations League sterk, maar golden generation aan einde
+    "Morocco":      1840,  # WK2022 SF, AFCON 2021 & 2023 deelname, CAF-top
+    "Colombia":     1830,  # Copa2024 finalist, CAF-top, Elo-top 10
+    "Uruguay":      1820,  # Copa2024 SF, consistent
+    "Croatia":      1810,  # WK2022 3e, Nations League finalist 2023
+    "Switzerland":  1790,  # WK2022 QF, Euro2024 QF — steevast bovenste helft
+    "USA":          1780,  # Gold Cup 2023 winnaar, thuisland WK
+    "Mexico":       1780,  # thuisland WK, altijd solide
+    "Norway":       1790,  # sterk Nations League, Haaland-generatie
+    "Austria":      1760,  # EK2024 R16, goed kwalificatierecord
+    "Japan":        1760,  # WK2022 R16 (verrassingsteam), AFC solide
+    "Senegal":      1750,  # AFCON 2021/2022 winnaar, WK2022 R16
+    "Ivory Coast":  1740,  # AFCON 2023/24 winnaar
+    "Canada":       1740,  # thuisland WK, sterk in CONCACAF kwalificatie
+    "South Korea":  1730,  # WK2022 R16, sterk Aziatisch kampioenschap
+    "Ecuador":      1710,  # WK2022 groepsfase, CONMEBOL-top
+    "Scotland":     1710,  # EK2024 deelname, consistent
+    "Algeria":      1700,  # AFCON 2019, solide CAF-team
+    "Uzbekistan":   1620,  # opkomend AFC-team
+    "Egypt":        1690,  # AFCON finalist 2021, CAF-sterk
+    "Tunisia":      1650,  # regelmatige WK-deelnemer
+    "Paraguay":     1680,  # CONMEBOL-middenklasse
+    "Australia":    1670,  # WK2022 R16, AFC-top
+    "South Africa": 1650,  # AFCON deelnemer, solide CAF
+    "Ghana":        1660,  # WK-aanwezigheid, AFCON deelname
+    "Iran":         1690,  # AFC kwalificatie top, WK-veteraan
+    "Saudi Arabia": 1640,  # WK2022 (versloeg Argentina in groepsfase!)
+    "Cape Verde":   1650,  # AFCON 2023 QF, opkomend
+    "DR Congo":     1620,  # AFCON sterk, solide CAF
+    "Qatar":        1590,  # WK2022 gastland, AFC-onderste helft
+    "Panama":       1610,  # CONCACAF solide
+    "Iraq":         1600,  # AFC-middenklasse
+    "Jordan":       1590,  # AFC-middenmoot
+    "New Zealand":  1590,  # OFC-top
+    "Bolivia":      1590,  # CONMEBOL-onderste tier
+    "Haiti":        1560,  # CONCACAF
+    "Curaçao":      1540,  # CONCACAF, nieuwkomer
+    "Jamaica":      1580,  # CONCACAF
+    "Suriname":     1560,  # CONMEBOL, debutant
+    "New Caledonia":1460,  # OFC-laagst
+    # Play-off kwalificanten
+    "Bosnia and Herzegovina": 1740,  # UEFA play-off, sterke generatie
+    "Sweden":       1800,  # UEFA, consistent Nations League
+    "Turkey":       1770,  # Euro2024 QF, sterk
+    "Czechia":      1710,  # Euro2024 R16, solide
 }
 
 # ── Elo berekening ────────────────────────────────────────────────────────────
@@ -159,12 +167,17 @@ def save_elo(elo_dict: dict):
     print(f"✓ elo_ratings.csv opgeslagen ({len(rows)} teams)")
 
 def load_elo() -> dict:
-    """Laad Elo-ratings uit CSV, of bouw opnieuw op."""
+    """Laad Elo-ratings uit CSV (bijgewerkt tijdens toernooi), anders INITIAL_ELO."""
     path = DATA_DIR / "elo_ratings.csv"
     if path.exists():
         df = pd.read_csv(path)
-        return dict(zip(df["team"], df["elo"]))
-    return build_elo_from_history()
+        elo = dict(zip(df["team"], df["elo"]))
+        # Vul ontbrekende teams aan vanuit INITIAL_ELO
+        for team, rating in INITIAL_ELO.items():
+            if team not in elo:
+                elo[team] = rating
+        return elo
+    return INITIAL_ELO.copy()
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 

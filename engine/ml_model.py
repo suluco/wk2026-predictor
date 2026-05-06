@@ -6,28 +6,12 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.calibration import CalibratedClassifierCV
 from xgboost import XGBClassifier
+from engine.features import FEATURE_COLS
 
 DATA_DIR  = Path(__file__).parent.parent / "data"
 MODEL_DIR = Path(__file__).parent.parent / "data"
 MODEL_PATH  = MODEL_DIR / "model.pkl"
 SCALER_PATH = MODEL_DIR / "scaler.pkl"
-
-FEATURE_COLS = [
-    # Elo
-    "elo_diff", "elo_win_prob_a", "elo_draw_prob",
-    # Team stats
-    "attack_diff", "defense_diff", "form_diff",
-    "wc_exp_diff", "lambda_a", "lambda_b", "lambda_diff",
-    # Confederatie
-    "same_conf",
-    # Squad
-    "squad_score_diff", "squad_rating_diff", "ucl_players_diff",
-    "star_player_diff", "coach_rating_diff", "age_factor_diff",
-    # Klimaat
-    "climate_adv_diff", "alt_penalty", "heat_penalty",
-    # Vermoeidheid
-    "days_rest_diff", "travel_km_diff", "jetlag_diff", "fatigue_diff",
-]
 
 # ── Trainen ───────────────────────────────────────────────────────────────────
 
@@ -121,19 +105,36 @@ def blend_predictions(
     ml_probs: dict,
     poisson_probs: dict,
     h2h_stats: dict,
-    ml_weight: float = 0.45
+    elo_probs: dict = None,
+    ml_weight: float = 0.30,
+    poisson_weight: float = 0.50,
+    elo_weight: float = 0.20,
 ) -> dict:
     """
-    Stap 1: Blend ML + Poisson (45/55)
-    Stap 2: H2H correctie als aparte zachte prior
-    """
-    poisson_weight = 1 - ml_weight
+    Blend ML + Poisson + Elo.
+    Standaard gewichten: ML 30%, Poisson 50%, Elo 20%.
+    H2H als zachte correctie bovenop de blend.
 
-    blended = {
-        "win_a": ml_weight * ml_probs["win_a"] + poisson_weight * poisson_probs["win_a"],
-        "draw":  ml_weight * ml_probs["draw"]  + poisson_weight * poisson_probs["draw"],
-        "win_b": ml_weight * ml_probs["win_b"] + poisson_weight * poisson_probs["win_b"],
-    }
+    Elo als derde component corrigeert historische ML-bias:
+    het ML-model traint op kleine WK-dataset (192 matches) en kan
+    teams over/onderschatten op basis van toernooi-succes in 2014-2022.
+    """
+    if elo_probs is None:
+        # Geen Elo: herverdeel gewichten over ML + Poisson
+        total = ml_weight + poisson_weight
+        ml_w  = ml_weight / total
+        poi_w = poisson_weight / total
+        blended = {
+            "win_a": ml_w * ml_probs["win_a"] + poi_w * poisson_probs["win_a"],
+            "draw":  ml_w * ml_probs["draw"]  + poi_w * poisson_probs["draw"],
+            "win_b": ml_w * ml_probs["win_b"] + poi_w * poisson_probs["win_b"],
+        }
+    else:
+        blended = {
+            "win_a": ml_weight * ml_probs["win_a"] + poisson_weight * poisson_probs["win_a"] + elo_weight * elo_probs["win_a"],
+            "draw":  ml_weight * ml_probs["draw"]  + poisson_weight * poisson_probs["draw"]  + elo_weight * elo_probs["draw"],
+            "win_b": ml_weight * ml_probs["win_b"] + poisson_weight * poisson_probs["win_b"] + elo_weight * elo_probs["win_b"],
+        }
 
     # H2H correctie — alleen als er minstens 1 duel is
     games = h2h_stats.get("games", 0)

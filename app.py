@@ -60,7 +60,7 @@ def get_resources():
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown('<h1 style="font-size:2.8rem;margin-bottom:0">⚽ WK 2026 VOORSPELLER</h1>', unsafe_allow_html=True)
-st.markdown('<p class="muted" style="margin-top:0">Poisson Monte Carlo · XGBoost ML · Elo · H2H · Bayesiaanse updates</p>', unsafe_allow_html=True)
+st.markdown('<p class="muted" style="margin-top:0">Poisson Monte Carlo 50% · XGBoost ML 30% · Elo 20% · H2H correctie · Bayesiaanse updates</p>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4 = st.tabs(["WEDSTRIJD VOORSPELLEN", "ALLE WEDSTRIJDEN", "UITSLAG INVOEREN", "TOERNOOI BRACKET"])
 
@@ -98,7 +98,10 @@ with tab1:
         home, away = row["home"], row["away"]
 
         with st.spinner("Simuleren..."):
-            result = predict_match(home, away, knockout=knockout, n=n_sim, resources=resources)
+            result = predict_match(
+                home, away, knockout=knockout, n=n_sim, resources=resources,
+                match_id=int(row["match_id"]), match_date=str(row["date"]),
+            )
 
         ml = result["most_likely_score"]
         fh, fa = flag(home), flag(away)
@@ -129,20 +132,26 @@ with tab1:
         """, unsafe_allow_html=True)
 
         # ── Model breakdown ───────────────────────────────────────────
-        with st.expander("📊 Model breakdown (ML vs Poisson)"):
-            mc1, mc2 = st.columns(2)
+        with st.expander("📊 Model breakdown (ML · Poisson · Elo)"):
+            mc1, mc2, mc3 = st.columns(3)
             mp = result["ml_probs"]
             pp = result["poisson_probs"]
+            ep = result["elo_probs"]
             with mc1:
-                st.markdown("**XGBoost ML**")
+                st.markdown("**XGBoost ML** (30%)")
                 st.markdown(f"Win {home}: **{round(mp['win_a']*100,1)}%**")
                 st.markdown(f"Gelijkspel: **{round(mp['draw']*100,1)}%**")
                 st.markdown(f"Win {away}: **{round(mp['win_b']*100,1)}%**")
             with mc2:
-                st.markdown("**Poisson Monte Carlo**")
+                st.markdown("**Poisson MC** (50%)")
                 st.markdown(f"Win {home}: **{round(pp['win_a']*100,1)}%**")
                 st.markdown(f"Gelijkspel: **{round(pp['draw']*100,1)}%**")
                 st.markdown(f"Win {away}: **{round(pp['win_b']*100,1)}%**")
+            with mc3:
+                st.markdown("**Elo** (20%)")
+                st.markdown(f"Win {home}: **{round(ep['win_a']*100,1)}%**")
+                st.markdown(f"Gelijkspel: **{round(ep['draw']*100,1)}%**")
+                st.markdown(f"Win {away}: **{round(ep['win_b']*100,1)}%**")
 
         # ── Kansen ───────────────────────────────────────────────────
         st.markdown("#### KANSEN")

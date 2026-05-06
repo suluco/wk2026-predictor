@@ -12,14 +12,14 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 # coach_rating: subjectieve coachkwaliteit 1-10 op basis van historische prestaties
 
 SQUAD_DATA = {
-    "Argentina":   {"avg_rating": 83, "ucl_players": 7,  "star_player": 1, "coach_rating": 8.5, "avg_age": 28.2},
+    "Argentina":   {"avg_rating": 85, "ucl_players": 10, "star_player": 1, "coach_rating": 9.0, "avg_age": 27.5},
     "France":      {"avg_rating": 85, "ucl_players": 10, "star_player": 1, "coach_rating": 8.0, "avg_age": 26.8},
+    "Spain":       {"avg_rating": 85, "ucl_players": 10, "star_player": 1, "coach_rating": 8.5, "avg_age": 25.2},
     "England":     {"avg_rating": 83, "ucl_players": 9,  "star_player": 1, "coach_rating": 7.5, "avg_age": 26.5},
     "Belgium":     {"avg_rating": 81, "ucl_players": 7,  "star_player": 0, "coach_rating": 7.0, "avg_age": 29.5},
-    "Brazil":      {"avg_rating": 83, "ucl_players": 8,  "star_player": 1, "coach_rating": 7.5, "avg_age": 26.2},
+    "Brazil":      {"avg_rating": 83, "ucl_players": 9,  "star_player": 1, "coach_rating": 7.5, "avg_age": 26.2},
     "Portugal":    {"avg_rating": 83, "ucl_players": 8,  "star_player": 1, "coach_rating": 7.8, "avg_age": 27.8},
     "Netherlands": {"avg_rating": 82, "ucl_players": 8,  "star_player": 1, "coach_rating": 8.0, "avg_age": 26.5},
-    "Spain":       {"avg_rating": 84, "ucl_players": 10, "star_player": 1, "coach_rating": 8.5, "avg_age": 25.2},
     "Morocco":     {"avg_rating": 78, "ucl_players": 5,  "star_player": 0, "coach_rating": 8.0, "avg_age": 27.0},
     "Germany":     {"avg_rating": 82, "ucl_players": 8,  "star_player": 0, "coach_rating": 7.5, "avg_age": 26.0},
     "Colombia":    {"avg_rating": 79, "ucl_players": 4,  "star_player": 0, "coach_rating": 7.5, "avg_age": 27.5},
@@ -66,8 +66,9 @@ SQUAD_DATA = {
     "Denmark":     {"avg_rating": 79, "ucl_players": 5,  "star_player": 0, "coach_rating": 7.5, "avg_age": 27.0},
     "Czechia":     {"avg_rating": 75, "ucl_players": 2,  "star_player": 0, "coach_rating": 7.0, "avg_age": 27.5},
     "Italy":       {"avg_rating": 80, "ucl_players": 6,  "star_player": 0, "coach_rating": 7.8, "avg_age": 27.8},
-    "Bosnia and Herzegovina": {"avg_rating": 73, "ucl_players": 1, "star_player": 0, "coach_rating": 6.8, "avg_age": 27.5},
-    "TBD":         {"avg_rating": 74, "ucl_players": 2,  "star_player": 0, "coach_rating": 6.8, "avg_age": 27.0},
+    "Bosnia and Herzegovina": {"avg_rating": 74, "ucl_players": 2, "star_player": 0, "coach_rating": 7.0, "avg_age": 27.0},
+    "Suriname":    {"avg_rating": 68, "ucl_players": 0,  "star_player": 0, "coach_rating": 6.2, "avg_age": 26.5},
+    "TBD":         {"avg_rating": 73, "ucl_players": 1,  "star_player": 0, "coach_rating": 6.8, "avg_age": 27.0},
 }
 
 def get_squad(team: str) -> dict:

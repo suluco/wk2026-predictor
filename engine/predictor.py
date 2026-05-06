@@ -47,12 +47,16 @@ def explain(result: dict, feats: dict, h2h: dict, teams_df: pd.DataFrame) -> lis
     elif atk_diff < -0.15:
         reasons.append(f"{b} heeft sterkere aanval (+{round(-atk_diff,2)})")
 
-    # Verdediging
+    # Verdediging (lager defense-getal = beter)
     def_diff = feats.get("defense_diff", 0)
     if def_diff < -0.10:
-        reasons.append(f"{a} heeft sterkere verdediging (factor {round(feats.get('lambda_a',0),2)})")
+        ta = teams_df.loc[a] if a in teams_df.index else None
+        tb = teams_df.loc[b] if b in teams_df.index else None
+        reasons.append(f"{a} heeft sterkere verdediging (def {round(float(ta['defense']),2) if ta is not None else '?'} vs {round(float(tb['defense']),2) if tb is not None else '?'})")
     elif def_diff > 0.10:
-        reasons.append(f"{b} heeft sterkere verdediging (factor {round(feats.get('lambda_b',0),2)})")
+        ta = teams_df.loc[a] if a in teams_df.index else None
+        tb = teams_df.loc[b] if b in teams_df.index else None
+        reasons.append(f"{b} heeft sterkere verdediging (def {round(float(tb['defense']),2) if tb is not None else '?'} vs {round(float(ta['defense']),2) if ta is not None else '?'})")
 
     # Vorm
     form_diff = feats.get("form_diff", 0)
@@ -91,7 +95,9 @@ def predict_match(
     away: str,
     knockout: bool = False,
     n: int = 50_000,
-    resources: dict = None
+    resources: dict = None,
+    match_id: int = 1,
+    match_date: str = "2026-06-11",
 ) -> dict:
     """
     Volledige voorspelling via drie lagen:
@@ -116,13 +122,22 @@ def predict_match(
     }
 
     # ── Laag 2: ML voorspelling ───────────────────────────────────────
-    feats = build_features(home, away, elo_dict, h2h_df, teams_df)
-    arr   = features_to_array(feats)
+    feats = build_features(
+        home, away, elo_dict, h2h_df, teams_df,
+        match_id=match_id, match_date=match_date,
+    )
+    arr = features_to_array(feats)
     ml_probs = predict_proba(arr, model, scaler)
 
-    # ── Laag 3: Blend + H2H correctie ────────────────────────────────
+    # ── Laag 3: Elo-kansen als derde blendingscomponent ──────────────
+    elo_a = feats.get("elo_a", 0)
+    elo_b = feats.get("elo_b", 0)
+    elo_win_a, elo_draw, elo_win_b = elo_win_probability(elo_a, elo_b)
+    elo_probs = {"win_a": elo_win_a, "draw": elo_draw, "win_b": elo_win_b}
+
+    # ── Laag 4: Blend + H2H correctie ────────────────────────────────
     h2h = get_h2h_stats(home, away, h2h_df)
-    blended = blend_predictions(ml_probs, poisson_probs, h2h, ml_weight=0.45)
+    blended = blend_predictions(ml_probs, poisson_probs, h2h, elo_probs=elo_probs)
 
     # ── Knockout aanpassing ───────────────────────────────────────────
     if knockout and blended["draw"] > 0:
@@ -157,6 +172,7 @@ def predict_match(
         "knockout":         knockout,
         "ml_probs":         ml_probs,
         "poisson_probs":    poisson_probs,
+        "elo_probs":        elo_probs,
     }
 
     result["reasons"] = explain(result, feats, h2h, teams_df)
@@ -174,7 +190,11 @@ def predict_all_upcoming(n: int = 25_000) -> pd.DataFrame:
         away = row["away"]
         if home == "TBD" or away == "TBD":
             continue
-        result = predict_match(home, away, n=n, resources=resources)
+        result = predict_match(
+            home, away, n=n, resources=resources,
+            match_id=int(row["match_id"]),
+            match_date=str(row["date"]),
+        )
         rows.append({
             "match_id":   row["match_id"],
             "date":       row["date"],
