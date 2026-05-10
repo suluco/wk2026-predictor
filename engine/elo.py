@@ -107,7 +107,7 @@ def build_elo_from_history() -> dict:
     """
     elo = INITIAL_ELO.copy()
 
-    for year in [2014, 2018, 2022]:
+    for year in [2002, 2006, 2010, 2014, 2018, 2022]:
         path = DATA_DIR / f"wc{year}.json"
         if not path.exists():
             continue

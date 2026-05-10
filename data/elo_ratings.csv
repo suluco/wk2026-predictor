@@ -1,53 +1,80 @@
 team,elo
-Argentina,2000
-Spain,1970
-France,1950
-Brazil,1930
-England,1920
-Portugal,1910
-Netherlands,1900
-Germany,1880
-Belgium,1860
-Morocco,1840
-Colombia,1830
-Uruguay,1820
-Croatia,1810
-Sweden,1800
-Switzerland,1790
-Norway,1790
-USA,1780
-Mexico,1780
-Turkey,1770
-Austria,1760
-Japan,1760
-Senegal,1750
-Ivory Coast,1740
-Canada,1740
-Bosnia and Herzegovina,1740
-South Korea,1730
-Ecuador,1710
-Scotland,1710
-Czechia,1710
-Algeria,1700
-Egypt,1690
-Iran,1690
-Paraguay,1680
-Australia,1670
-Ghana,1660
-Tunisia,1650
-South Africa,1650
-Cape Verde,1650
-Saudi Arabia,1640
-Uzbekistan,1620
-DR Congo,1620
-Panama,1610
-Iraq,1600
-Qatar,1590
-Jordan,1590
-New Zealand,1590
-Bolivia,1590
-Jamaica,1580
-Haiti,1560
-Suriname,1560
-Curaçao,1540
-New Caledonia,1460
+Netherlands,1996.4
+France,1943.0
+Argentina,1920.1
+Brazil,1906.5
+Germany,1904.6
+Belgium,1882.6
+Spain,1869.1
+Colombia,1848.5
+England,1828.4
+Portugal,1828.4
+Sweden,1825.0
+Morocco,1818.6
+Uruguay,1812.1
+Croatia,1796.6
+Norway,1790.0
+Turkey,1785.5
+Mexico,1781.5
+Switzerland,1765.6
+Senegal,1763.4
+Austria,1760.0
+USA,1744.9
+Ivory Coast,1740.0
+Bosnia and Herzegovina,1740.0
+Japan,1717.6
+Scotland,1710.0
+Czechia,1710.0
+Ecuador,1709.8
+Canada,1696.7
+South Korea,1683.8
+South Africa,1683.8
+Algeria,1679.5
+Paraguay,1667.9
+Ghana,1664.1
+Cape Verde,1650.0
+Iran,1636.3
+Italy,1628.2
+Australia,1624.7
+Egypt,1621.9
+Chile,1621.5
+Uzbekistan,1620.0
+DR Congo,1620.0
+Tunisia,1611.1
+Iraq,1600.0
+New Zealand,1594.5
+Russia,1593.2
+Jordan,1590.0
+Bolivia,1590.0
+Denmark,1589.9
+Costa Rica,1584.9
+Jamaica,1580.0
+Panama,1571.8
+Poland,1568.1
+Qatar,1562.2
+Haiti,1560.0
+Suriname,1560.0
+Ireland,1558.2
+Saudi Arabia,1556.5
+Côte d'Ivoire,1545.0
+Ukraine,1544.0
+Curaçao,1540.0
+Greece,1539.7
+Nigeria,1526.2
+Slovakia,1518.9
+Angola,1517.8
+Slovenia,1513.9
+Serbia,1513.0
+Cameroon,1511.5
+Peru,1508.2
+Bosnia-Herzegovina,1506.6
+Czech Republic,1502.5
+Trinidad and Tobago,1498.6
+Wales,1493.7
+Iceland,1490.4
+Togo,1481.8
+North Korea,1475.3
+Serbia and Montenegro,1474.0
+Honduras,1471.5
+China,1470.4
+New Caledonia,1460.0
