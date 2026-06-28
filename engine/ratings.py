@@ -63,17 +63,26 @@ def apply_result(teams_df, home, away, home_score, away_score):
     print(f"✓ Teamsterktes bijgewerkt: {home} {home_score}–{away_score} {away}")
     return teams_df
 
-def record_result(match_id: int, home_score: int, away_score: int):
+def retrain_model() -> None:
+    """
+    FIX 5: exporteerbare wrapper zodat auto_updater (en andere callers) het model
+    eenmalig kunnen hertrainen na een batch record_result(retrain=False) aanroepen.
+    """
+    from engine.ml_model import retrain_model as _retrain
+    _retrain()
+
+
+def record_result(match_id: int, home_score: int, away_score: int, retrain: bool = True):
     """
     Verwerk een gespeelde uitslag:
     1. Schrijf naar matches.csv
     2. Update teamsterktes (attack/defense/form)
     3. Update Elo-ratings
-    4. Hertraineer ML-model
+    4. Hertraineer ML-model (alleen als retrain=True)
+    FIX 5: parameter retrain=True toegevoegd zodat batch-verwerking in auto_updater
+    stap 4 kan overslaan en het model eenmalig hertrainent na de volledige batch.
     """
     from engine.simulator import load_teams
-    from engine.features import build_training_data
-    from engine.ml_model import train
 
     matches_df = pd.read_csv(DATA_DIR / "matches.csv")
     teams_df   = load_teams()
@@ -101,11 +110,7 @@ def record_result(match_id: int, home_score: int, away_score: int):
     print("✓ Elo bijwerken...")
     update_elo(home, away, home_score, away_score)
 
-    # 4. ML-model hertrainen op nieuwe data
-    print("✓ ML-model hertrainen...")
-    try:
-        df = build_training_data()
-        train(df)
-        print("✓ Model bijgewerkt")
-    except Exception as e:
-        print(f"  Model hertraining overgeslagen: {e}")
+    # 4. ML-model hertrainen op nieuwe data (overgeslagen bij retrain=False voor batches)
+    if retrain:
+        print("✓ ML-model hertrainen...")
+        retrain_model()

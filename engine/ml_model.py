@@ -64,6 +64,20 @@ def train(df: pd.DataFrame = None) -> tuple:
 
     return model, scaler
 
+def retrain_model() -> None:
+    """
+    Herbouw trainingsdata en hertraineer het model in één aanroep.
+    FIX 5: apart exporteerbaar gemaakt zodat auto_updater dit eenmalig na een
+    batch record_result(retrain=False) aanroepen kan uitvoeren.
+    """
+    from engine.features import build_training_data
+    try:
+        df = build_training_data()
+        train(df)
+        print("✓ Model bijgewerkt")
+    except Exception as e:
+        print(f"  Model hertraining overgeslagen: {e}")
+
 def load_model() -> tuple:
     """Laad model en scaler. Train opnieuw als niet gevonden."""
     if MODEL_PATH.exists() and SCALER_PATH.exists():
@@ -106,21 +120,41 @@ def blend_predictions(
     poisson_probs: dict,
     h2h_stats: dict,
     elo_probs: dict = None,
+    odds_probs: dict = None,
     ml_weight: float = 0.30,
     poisson_weight: float = 0.50,
     elo_weight: float = 0.20,
 ) -> dict:
     """
-    Blend ML + Poisson + Elo.
-    Standaard gewichten: ML 30%, Poisson 50%, Elo 20%.
-    H2H als zachte correctie bovenop de blend.
+    Blend ML + Poisson + Elo (+ optioneel bookmaker-odds).
 
-    Elo als derde component corrigeert historische ML-bias:
-    het ML-model traint op kleine WK-dataset (192 matches) en kan
-    teams over/onderschatten op basis van toernooi-succes in 2014-2022.
+    Zonder odds: ML 30%, Poisson 50%, Elo 20%.
+    Met odds: odds 30%, Poisson 35%, ML 20%, Elo 15%.
+    Bookmaker-odds absorberen alle zachte informatie (blessures, nieuws, markt)
+    die de andere modellen niet hebben. H2H als zachte correctie bovenop de blend.
     """
-    if elo_probs is None:
-        # Geen Elo: herverdeel gewichten over ML + Poisson
+    if odds_probs is not None:
+        # Met bookmaker-odds: hogere nadruk op markt
+        ODDS_W   = 0.30
+        POI_W    = 0.35
+        ML_W     = 0.20
+        ELO_W    = 0.15
+        blended = {
+            "win_a": (ODDS_W * odds_probs["win_a"]
+                      + POI_W * poisson_probs["win_a"]
+                      + ML_W  * ml_probs["win_a"]
+                      + ELO_W * (elo_probs["win_a"] if elo_probs else ml_probs["win_a"])),
+            "draw":  (ODDS_W * odds_probs["draw"]
+                      + POI_W * poisson_probs["draw"]
+                      + ML_W  * ml_probs["draw"]
+                      + ELO_W * (elo_probs["draw"] if elo_probs else ml_probs["draw"])),
+            "win_b": (ODDS_W * odds_probs["win_b"]
+                      + POI_W * poisson_probs["win_b"]
+                      + ML_W  * ml_probs["win_b"]
+                      + ELO_W * (elo_probs["win_b"] if elo_probs else ml_probs["win_b"])),
+        }
+    elif elo_probs is None:
+        # Geen Elo, geen odds: herverdeel gewichten over ML + Poisson
         total = ml_weight + poisson_weight
         ml_w  = ml_weight / total
         poi_w = poisson_weight / total
@@ -140,8 +174,11 @@ def blend_predictions(
     games = h2h_stats.get("games", 0)
     if games > 0:
         h2h_weight = min(games * 0.05, 0.15)  # Max 15% invloed, opbouwend per duel
-        h2h_win_a  = h2h_stats["win_ratio_a"]
-        h2h_win_b  = 1 - h2h_win_a
+        h2h_win_a  = h2h_stats["win_ratio_a"]                    # Laplace: (wins_a + 1) / (games + 2)
+        # FIX: was '1 - h2h_win_a', which absorbed the draw fraction into win_b and
+        # caused a systematic bias toward the lexicographically later team name.
+        # Now uses symmetric Laplace smoothing identical to win_ratio_a.
+        h2h_win_b  = (h2h_stats["wins_b"] + 1) / (games + 2)
         h2h_draw   = h2h_stats["draws"] / games
 
         # Normaliseer H2H kansen

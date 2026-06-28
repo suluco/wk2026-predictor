@@ -56,7 +56,9 @@ def simulate_match(
     away: str,
     n: int = 50_000,
     knockout: bool = False,
-    teams_df: pd.DataFrame = None
+    teams_df: pd.DataFrame = None,
+    elo_home: float = None,
+    elo_away: float = None,
 ) -> dict:
     """
     Simuleer een wedstrijd tussen home en away via Monte Carlo + Poisson.
@@ -76,6 +78,15 @@ def simulate_match(
 
     lam_home = compute_lambda(home_data, away_data)
     lam_away = compute_lambda(away_data, home_data)
+
+    # ELO-correctie: schaalt lambda's op basis van relatieve kracht.
+    # Zonder deze correctie geeft Poisson(~1.2) altijd 1-1 als modus bij gelijke teams,
+    # ook als ELO een duidelijk verschil aangeeft.
+    if elo_home is not None and elo_away is not None:
+        ELO_ALPHA = 0.45
+        exp_home = 1 / (1 + 10 ** ((elo_away - elo_home) / 400))
+        lam_home *= (exp_home / 0.5) ** ELO_ALPHA
+        lam_away *= ((1 - exp_home) / 0.5) ** ELO_ALPHA
 
     # Trek doelpunten uit Poisson-verdeling
     goals_home = np.random.poisson(lam_home, n)

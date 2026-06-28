@@ -6,6 +6,7 @@ from engine.elo import load_elo, get_elo, elo_win_probability
 from engine.h2h import load_h2h, get_h2h_stats
 from engine.features import build_features, features_to_array
 from engine.ml_model import load_model, predict_proba, blend_predictions
+from engine.odds import load_odds, get_match_odds
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -13,10 +14,11 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 
 def load_resources():
     return {
-        "teams_df": load_teams(),
-        "elo_dict": load_elo(),
-        "h2h_df":   load_h2h(),
-        "model":    load_model(),
+        "teams_df":  load_teams(),
+        "elo_dict":  load_elo(),
+        "h2h_df":    load_h2h(),
+        "model":     load_model(),
+        "odds_dict": load_odds(),  # leeg dict als geen API key ingesteld
     }
 
 # ── Uitleg genereren ──────────────────────────────────────────────────────────
@@ -100,21 +102,26 @@ def predict_match(
     match_date: str = "2026-06-11",
 ) -> dict:
     """
-    Volledige voorspelling via drie lagen:
-      1. Poisson Monte Carlo simulatie
+    Volledige voorspelling via vier lagen:
+      1. Poisson Monte Carlo simulatie (ELO-gestuurd)
       2. XGBoost ML-model
-      3. H2H correctie
+      3. Elo-kansen
+      4. Bookmaker-odds (optioneel, via ODDS_API_KEY)
     """
     if resources is None:
         resources = load_resources()
 
-    teams_df = resources["teams_df"]
-    elo_dict = resources["elo_dict"]
-    h2h_df   = resources["h2h_df"]
+    teams_df  = resources["teams_df"]
+    elo_dict  = resources["elo_dict"]
+    h2h_df    = resources["h2h_df"]
+    odds_dict = resources.get("odds_dict", {})
     model, scaler = resources["model"]
 
-    # ── Laag 1: Poisson simulatie ─────────────────────────────────────
-    sim = simulate_match(home, away, n=n, knockout=knockout, teams_df=teams_df)
+    # ── Laag 1: Poisson simulatie (met ELO-gestuurd lambda) ──────────
+    _elo_home = get_elo(home, elo_dict)
+    _elo_away = get_elo(away, elo_dict)
+    sim = simulate_match(home, away, n=n, knockout=knockout, teams_df=teams_df,
+                         elo_home=_elo_home, elo_away=_elo_away)
     poisson_probs = {
         "win_a": sim["win_home"] / 100,
         "draw":  sim["draw"] / 100,
@@ -129,15 +136,22 @@ def predict_match(
     arr = features_to_array(feats)
     ml_probs = predict_proba(arr, model, scaler)
 
-    # ── Laag 3: Elo-kansen als derde blendingscomponent ──────────────
+    # ── Laag 3: Elo-kansen ────────────────────────────────────────────
     elo_a = feats.get("elo_a", 0)
     elo_b = feats.get("elo_b", 0)
     elo_win_a, elo_draw, elo_win_b = elo_win_probability(elo_a, elo_b)
     elo_probs = {"win_a": elo_win_a, "draw": elo_draw, "win_b": elo_win_b}
 
-    # ── Laag 4: Blend + H2H correctie ────────────────────────────────
+    # ── Laag 4: Bookmaker-odds (optioneel) ────────────────────────────
+    odds_probs = get_match_odds(home, away, odds_dict)
+
+    # ── Blend + H2H correctie ─────────────────────────────────────────
     h2h = get_h2h_stats(home, away, h2h_df)
-    blended = blend_predictions(ml_probs, poisson_probs, h2h, elo_probs=elo_probs)
+    blended = blend_predictions(
+        ml_probs, poisson_probs, h2h,
+        elo_probs=elo_probs,
+        odds_probs=odds_probs,
+    )
 
     # ── Knockout aanpassing ───────────────────────────────────────────
     if knockout and blended["draw"] > 0:
@@ -173,6 +187,8 @@ def predict_match(
         "ml_probs":         ml_probs,
         "poisson_probs":    poisson_probs,
         "elo_probs":        elo_probs,
+        "odds_probs":       odds_probs,
+        "odds_active":      odds_probs is not None,
     }
 
     result["reasons"] = explain(result, feats, h2h, teams_df)

@@ -32,12 +32,14 @@ PLAYOFF_MAPPING = {
 
 # Bekende naam-aliassen tussen openfootball en onze teams.csv
 NAME_ALIASES = {
-    "Korea Republic":    "South Korea",
-    "IR Iran":           "Iran",
-    "Côte d'Ivoire":     "Ivory Coast",
-    "USA":               "USA",
-    "Türkiye":           "Turkey",
-    "Bosnia-Herzegovina":"Bosnia and Herzegovina",
+    "Korea Republic":      "South Korea",
+    "IR Iran":             "Iran",
+    "Côte d'Ivoire":       "Ivory Coast",
+    "USA":                 "USA",
+    "Türkiye":             "Turkey",
+    "Bosnia-Herzegovina":  "Bosnia and Herzegovina",
+    "Bosnia & Herzegovina":"Bosnia and Herzegovina",
+    "Czech Republic":      "Czechia",
 }
 
 def normalize_name(name: str) -> str:
@@ -106,7 +108,9 @@ def sync_results(wc_data: dict):
         return
 
     matches_df = pd.read_csv(DATA_DIR / "matches.csv")
-    from engine.ratings import record_result
+    # FIX 5: importeer ook retrain_model zodat we het model eenmalig hertrainen
+    # na de volledige batch in plaats van na elke individuele uitslag.
+    from engine.ratings import record_result, retrain_model
 
     new_results = 0
 
@@ -133,7 +137,10 @@ def sync_results(wc_data: dict):
         if mask.any():
             match_id = int(matches_df[mask].iloc[0]["match_id"])
             print(f"  Nieuwe uitslag: {team1} {g1}–{g2} {team2} (match {match_id})")
-            record_result(match_id, g1, g2)
+            # FIX 5: retrain=False — sla ML-hertraining over tijdens de batch;
+            # was retrain=True (default), waardoor het model N keer hertrainde
+            # voor N uitslagen terwijl elke run na de eerste identiek was.
+            record_result(match_id, g1, g2, retrain=False)
             matches_df = pd.read_csv(DATA_DIR / "matches.csv")  # reload
             new_results += 1
 
@@ -141,6 +148,9 @@ def sync_results(wc_data: dict):
         print("  Geen nieuwe uitslagen gevonden")
     else:
         print(f"\n✓ {new_results} nieuwe uitslagen verwerkt")
+        # FIX 5: hertraineer het model eenmalig na de volledige batch
+        print("✓ ML-model hertrainen (eenmalig na batch)...")
+        retrain_model()
 
 # ── Dagelijkse status report ──────────────────────────────────────────────────
 

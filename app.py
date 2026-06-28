@@ -62,7 +62,7 @@ def get_resources():
 st.markdown('<h1 style="font-size:2.8rem;margin-bottom:0">⚽ WK 2026 VOORSPELLER</h1>', unsafe_allow_html=True)
 st.markdown('<p class="muted" style="margin-top:0">Poisson Monte Carlo 50% · XGBoost ML 30% · Elo 20% · H2H correctie · Bayesiaanse updates</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["WEDSTRIJD VOORSPELLEN", "ALLE WEDSTRIJDEN", "UITSLAG INVOEREN", "TOERNOOI BRACKET"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["WEDSTRIJD VOORSPELLEN", "ALLE WEDSTRIJDEN", "UITSLAG INVOEREN", "TOERNOOI BRACKET", "TOPSCORERS"])
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 1 — Wedstrijd voorspellen
@@ -77,8 +77,16 @@ with tab1:
         (matches_df["away"] != "TBD")
     ].copy()
 
+    def match_label(row):
+        stage = str(row.get("stage", "group"))
+        if stage != "group":
+            prefix = stage
+        else:
+            prefix = f"Groep {row['group']}"
+        return f"{prefix} | {row['date']} | {flag(row['home'])} {row['home']} vs {flag(row['away'])} {row['away']}"
+
     match_labels = {
-        row["match_id"]: f"Groep {row['group']} | {row['date']} | {flag(row['home'])} {row['home']} vs {flag(row['away'])} {row['away']}"
+        row["match_id"]: match_label(row)
         for _, row in upcoming.iterrows()
     }
 
@@ -132,26 +140,55 @@ with tab1:
         """, unsafe_allow_html=True)
 
         # ── Model breakdown ───────────────────────────────────────────
-        with st.expander("📊 Model breakdown (ML · Poisson · Elo)"):
-            mc1, mc2, mc3 = st.columns(3)
+        odds_active = result.get("odds_active", False)
+        breakdown_label = "📊 Model breakdown (ML · Poisson · Elo · Odds)" if odds_active else "📊 Model breakdown (ML · Poisson · Elo)"
+        with st.expander(breakdown_label):
             mp = result["ml_probs"]
             pp = result["poisson_probs"]
             ep = result["elo_probs"]
-            with mc1:
-                st.markdown("**XGBoost ML** (30%)")
-                st.markdown(f"Win {home}: **{round(mp['win_a']*100,1)}%**")
-                st.markdown(f"Gelijkspel: **{round(mp['draw']*100,1)}%**")
-                st.markdown(f"Win {away}: **{round(mp['win_b']*100,1)}%**")
-            with mc2:
-                st.markdown("**Poisson MC** (50%)")
-                st.markdown(f"Win {home}: **{round(pp['win_a']*100,1)}%**")
-                st.markdown(f"Gelijkspel: **{round(pp['draw']*100,1)}%**")
-                st.markdown(f"Win {away}: **{round(pp['win_b']*100,1)}%**")
-            with mc3:
-                st.markdown("**Elo** (20%)")
-                st.markdown(f"Win {home}: **{round(ep['win_a']*100,1)}%**")
-                st.markdown(f"Gelijkspel: **{round(ep['draw']*100,1)}%**")
-                st.markdown(f"Win {away}: **{round(ep['win_b']*100,1)}%**")
+            op = result.get("odds_probs")
+
+            if odds_active and op:
+                mc1, mc2, mc3, mc4 = st.columns(4)
+                with mc1:
+                    st.markdown("**XGBoost ML** (20%)")
+                    st.markdown(f"Win {home}: **{round(mp['win_a']*100,1)}%**")
+                    st.markdown(f"Gelijkspel: **{round(mp['draw']*100,1)}%**")
+                    st.markdown(f"Win {away}: **{round(mp['win_b']*100,1)}%**")
+                with mc2:
+                    st.markdown("**Poisson MC** (35%)")
+                    st.markdown(f"Win {home}: **{round(pp['win_a']*100,1)}%**")
+                    st.markdown(f"Gelijkspel: **{round(pp['draw']*100,1)}%**")
+                    st.markdown(f"Win {away}: **{round(pp['win_b']*100,1)}%**")
+                with mc3:
+                    st.markdown("**Elo** (15%)")
+                    st.markdown(f"Win {home}: **{round(ep['win_a']*100,1)}%**")
+                    st.markdown(f"Gelijkspel: **{round(ep['draw']*100,1)}%**")
+                    st.markdown(f"Win {away}: **{round(ep['win_b']*100,1)}%**")
+                with mc4:
+                    n_books = op.get("bookmakers", "?")
+                    st.markdown(f"**Bookmaker-odds** (30%) 📈")
+                    st.markdown(f"Win {home}: **{round(op['win_a']*100,1)}%**")
+                    st.markdown(f"Gelijkspel: **{round(op['draw']*100,1)}%**")
+                    st.markdown(f"Win {away}: **{round(op['win_b']*100,1)}%**")
+                    st.caption(f"{n_books} bookmakers gemiddeld")
+            else:
+                mc1, mc2, mc3 = st.columns(3)
+                with mc1:
+                    st.markdown("**XGBoost ML** (30%)")
+                    st.markdown(f"Win {home}: **{round(mp['win_a']*100,1)}%**")
+                    st.markdown(f"Gelijkspel: **{round(mp['draw']*100,1)}%**")
+                    st.markdown(f"Win {away}: **{round(mp['win_b']*100,1)}%**")
+                with mc2:
+                    st.markdown("**Poisson MC** (50%)")
+                    st.markdown(f"Win {home}: **{round(pp['win_a']*100,1)}%**")
+                    st.markdown(f"Gelijkspel: **{round(pp['draw']*100,1)}%**")
+                    st.markdown(f"Win {away}: **{round(pp['win_b']*100,1)}%**")
+                with mc3:
+                    st.markdown("**Elo** (20%)")
+                    st.markdown(f"Win {home}: **{round(ep['win_a']*100,1)}%**")
+                    st.markdown(f"Gelijkspel: **{round(ep['draw']*100,1)}%**")
+                    st.markdown(f"Win {away}: **{round(ep['win_b']*100,1)}%**")
 
         # ── Kansen ───────────────────────────────────────────────────
         st.markdown("#### KANSEN")
@@ -207,8 +244,10 @@ with tab2:
             )
             all_preds["score"] = all_preds["pred_home"].astype(str) + "–" + all_preds["pred_away"].astype(str)
 
+            STAGE_LABELS = {"R32": "ROUND OF 32", "R16": "ROUND OF 16", "QF": "KWARTFINALES", "SF": "HALVE FINALES", "F": "FINALE"}
             for group in sorted(all_preds["group"].unique()):
-                st.markdown(f"**GROEP {group}**")
+                label = STAGE_LABELS.get(group, f"GROEP {group}")
+                st.markdown(f"**{label}**")
                 grp = all_preds[all_preds["group"] == group][[
                     "date","match","score","win_home","draw","win_away","winner","confidence"
                 ]].rename(columns={
@@ -277,31 +316,60 @@ with tab4:
             bracket   = predict_bracket(resources)
 
         # Visualisatie
-        rounds = [
-            ("Round of 32",  bracket["r32"],  4),
-            ("Round of 16",  bracket["r16"],  3),
-            ("Kwartfinales", bracket["qf"],   2),
-            ("Halve finales",bracket["sf"],   1),
+        def render_matchup(m: dict):
+            a, b, w = m["team_a"], m["team_b"], m["winner"]
+            sc = m["score"]
+            wa, wb = m.get("win_a", 0), m.get("win_b", 0)
+            fa, fb, fw = flag(a), flag(b), flag(w)
+            winner_side = "left" if w == a else "right"
+            aw = "font-weight:700;color:var(--green)" if winner_side == "left" else "color:var(--muted)"
+            bw = "font-weight:700;color:var(--green)" if winner_side == "right" else "color:var(--muted)"
+            st.markdown(f"""
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;
+                        padding:.6rem 1rem;margin:.25rem 0;display:flex;align-items:center;gap:.6rem">
+                <div style="flex:1;text-align:right;{aw}">{fa} {a}<br>
+                    <span style="font-size:.72rem;color:var(--muted)">{wa}%</span></div>
+                <div style="font-family:'Bebas Neue';font-size:1.4rem;color:var(--green);
+                            min-width:4rem;text-align:center">{sc[0]}–{sc[1]}</div>
+                <div style="flex:1;text-align:left;{bw}">{fb} {b}<br>
+                    <span style="font-size:.72rem;color:var(--muted)">{wb}%</span></div>
+                <div style="font-size:.8rem;border-left:1px solid var(--border);
+                            padding-left:.6rem;min-width:7rem">→ {fw} {w}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        round_defs = [
+            ("Round of 32",   "r32_matchups",  2),
+            ("Round of 16",   "r16_matchups",  2),
+            ("Kwartfinales",  "qf_matchups",   1),
+            ("Halve finales", "sf_matchups",   1),
         ]
 
-        for round_name, teams, _ in rounds:
+        for round_name, key, ncols in round_defs:
             st.markdown(f"**{round_name}**")
-            cols = st.columns(min(len(teams), 8))
-            for i, team in enumerate(teams):
-                with cols[i % len(cols)]:
-                    f = flag(team)
-                    st.markdown(f"""
-                    <div style="background:var(--card);border:1px solid var(--border);
-                    border-radius:6px;padding:.4rem .6rem;text-align:center;margin:.2rem 0;font-size:.85rem">
-                        {f} {team}
-                    </div>
-                    """, unsafe_allow_html=True)
+            matchups = bracket.get(key, [])
+            if ncols == 2 and len(matchups) >= 2:
+                half = len(matchups) // 2
+                col_left, col_right = st.columns(2)
+                for i, m in enumerate(matchups):
+                    with (col_left if i < half else col_right):
+                        render_matchup(m)
+            else:
+                for m in matchups:
+                    render_matchup(m)
 
         # Finalisten
         st.markdown("---")
-        fa, fb = bracket["finalist_a"], bracket["finalist_b"]
-        champ  = bracket["champion"]
-        third  = bracket["third"]
+        fm  = bracket.get("final_match", {})
+        tm  = bracket.get("third_match", {})
+        fa  = bracket["finalist_a"]
+        fb  = bracket["finalist_b"]
+        champ = bracket["champion"]
+        third = bracket["third"]
+        fsc = fm.get("score", (0, 0))
+        tsc = tm.get("score", (0, 0))
+        t3a = tm.get("team_a", "TBD")
+        t3b = tm.get("team_b", "TBD")
 
         st.markdown(f"""
         <div class="result-box" style="margin-top:1rem">
@@ -310,16 +378,121 @@ with tab4:
                 <div>
                     <div style="font-size:2.5rem">{flag(fa)}</div>
                     <div style="font-family:'Bebas Neue';font-size:1rem">{fa}</div>
+                    <div class="muted">{fm.get('win_a',0)}%</div>
                 </div>
-                <div style="font-family:'Bebas Neue';font-size:1.5rem;color:var(--muted)">VS</div>
+                <div style="font-family:'Bebas Neue';font-size:2rem;color:var(--green)">{fsc[0]}–{fsc[1]}</div>
                 <div>
                     <div style="font-size:2.5rem">{flag(fb)}</div>
                     <div style="font-family:'Bebas Neue';font-size:1rem">{fb}</div>
+                    <div class="muted">{fm.get('win_b',0)}%</div>
                 </div>
             </div>
             <div style="font-family:'Bebas Neue';font-size:2rem;color:var(--green)">
                 🏆 {flag(champ)} {champ}
             </div>
-            <div class="muted" style="margin-top:.5rem">🥉 Derde plaats: {flag(third)} {third}</div>
+            <div class="muted" style="margin-top:.5rem">
+                🥉 Derde plaats: {flag(t3a)} {t3a} {tsc[0]}–{tsc[1]} {flag(t3b)} {t3b} → {flag(third)} {third}
+            </div>
         </div>
         """, unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — Topscorers
+# ══════════════════════════════════════════════════════════════════════════════
+with tab5:
+    st.markdown("#### TOPSCORERS VOORSPELLING")
+    st.markdown(
+        '<p class="muted">Scorekans per wedstrijd via Poisson (λ = doelpunten/90 uit groepsfase), '
+        'gecorrigeerd voor tegenstander via Elo-ratings. '
+        'Verwacht aantal wedstrijden berekend op basis van Elo-winkans per ronde.</p>',
+        unsafe_allow_html=True
+    )
+
+    if st.button("⚽ VOORSPEL TOPSCORERS"):
+        from engine.top_scorers import predict_top_scorers
+
+        with st.spinner("Topscorers berekenen..."):
+            ts_resources = get_resources()
+            scorers = predict_top_scorers(ts_resources, top_n=10)
+
+        if not scorers:
+            st.info("Geen spelersdata beschikbaar.")
+        else:
+            # Gouden schoen favoriet apart uitgelicht
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#1a1200,#111);
+                        border:1px solid #c8a000;border-radius:12px;
+                        padding:1rem 1.2rem;margin-bottom:1rem">
+                <div class="muted" style="color:#c8a000">🥇 GOUDEN SCHOEN FAVORIET</div>
+                <div style="font-family:'Bebas Neue';font-size:1.6rem;letter-spacing:1px;margin:.3rem 0">
+                    {flag(scorers[0]['team'])} {scorers[0]['name']}
+                    <span style="color:#c8a000;font-size:1.1rem">
+                        &nbsp;·&nbsp; {scorers[0]['goals_so_far']} goals
+                    </span>
+                </div>
+                <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem">
+                    <span><span class="muted">team</span>&nbsp; {scorers[0]['team']}</span>
+                    <span><span class="muted">λ/90</span>&nbsp; {scorers[0]['goals_per_90']}</span>
+                    <span><span class="muted">scorekans volgende wedstrijd</span>&nbsp;
+                        <span style="color:var(--green);font-weight:700">
+                            {scorers[0]['score_probability_per_match']}%
+                        </span>
+                        &nbsp;vs {flag(scorers[0]['next_opponent'])} {scorers[0]['next_opponent']}
+                    </span>
+                    <span><span class="muted">verwachte wedstrijden</span>&nbsp;
+                        {scorers[0]['matches_remaining']}
+                    </span>
+                    <span><span class="muted">geprojecteerde goals</span>&nbsp;
+                        <span style="color:var(--green)">{scorers[0]['projected_goals']}</span>
+                    </span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Ranking tabel (alle 10)
+            st.markdown("**TOP 10 SCORERS — REST VAN HET TOERNOOI**")
+            for rank, p in enumerate(scorers, start=1):
+                medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, f"**{rank}.**")
+                bar_w = min(p["score_probability_per_match"] * 1.5, 100)
+                st.markdown(f"""
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;
+                            padding:.55rem 1rem;margin:.2rem 0;
+                            display:flex;align-items:center;gap:.8rem">
+                    <div style="min-width:2rem;text-align:center;font-family:'Bebas Neue';
+                                font-size:1rem;color:var(--muted)">{medal}</div>
+                    <div style="min-width:12rem">
+                        <div style="font-weight:600">{flag(p['team'])} {p['name']}</div>
+                        <div style="font-size:.75rem;color:var(--muted)">{p['team']}</div>
+                    </div>
+                    <div style="min-width:4rem;text-align:center">
+                        <div style="font-family:'Bebas Neue';font-size:1.3rem;color:var(--green)">{p['goals_so_far']}</div>
+                        <div style="font-size:.7rem;color:var(--muted)">goals</div>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">
+                            scorekans vs {flag(p['next_opponent'])} {p['next_opponent']}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:.5rem">
+                            <div class="prob-bg" style="flex:1;margin:0">
+                                <div class="prob-fill" style="width:{bar_w}%"></div>
+                            </div>
+                            <div style="font-size:.85rem;font-weight:600;
+                                        color:var(--green);min-width:3rem">{p['score_probability_per_match']}%</div>
+                        </div>
+                    </div>
+                    <div style="min-width:5rem;text-align:right;font-size:.82rem;color:var(--muted)">
+                        ~{p['matches_remaining']} wedstr.<br>
+                        <span style="color:var(--text)">{p['projected_goals']} proj.</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown(
+                '<p class="muted" style="margin-top:.8rem;font-size:.7rem">'
+                'Spelersdata groepsfase: statisch bijgehouden. '
+                'Scorekans gecorrigeerd voor tegenstander via Elo. '
+                'Geprojecteerde goals = λ_adj × verwachte wedstrijden. '
+                'Werkelijke tournament data kan afwijken.'
+                '</p>',
+                unsafe_allow_html=True
+            )

@@ -75,10 +75,15 @@ def get_group_winners(matches_df: pd.DataFrame) -> dict:
     return results
 
 
-def _predict_group_standings(group: str, matches_df: pd.DataFrame, resources: dict) -> list:
+def _predict_group_standings(group: str, matches_df: pd.DataFrame, resources: dict) -> tuple:
     """
     Simuleer groepswedstrijden via het model en bereken de verwachte eindstand.
-    Geeft een lijst van teams gesorteerd op verwachte positie (op basis van elo).
+    Geeft een tuple terug: (ranked_list, expected_pts_dict, expected_gd_dict).
+    FIX 2: returntype uitgebreid van list naar tuple zodat pts/gd beschikbaar zijn
+    voor de derde-plaatsbepaling zonder terug te vallen op hardcoded waarden.
+    FIX 4: except-blok logt nu de fout en gebruikt een neutrale 1-punt fallback
+    (equivalente gelijkspelsverwachting) in plaats van Elo/1000 dat een andere
+    schaal heeft dan echte wedstrijdpunten.
     """
     from engine.elo import get_elo
 
@@ -107,15 +112,18 @@ def _predict_group_standings(group: str, matches_df: pd.DataFrame, resources: di
                 gd = r["exp_goals_home"] - r["exp_goals_away"]
                 expected_gd[ta] += gd
                 expected_gd[tb] -= gd
-            except Exception:
-                # Fallback naar elo
-                expected_pts[ta] += get_elo(ta, elo_dict) / 1000
-                expected_pts[tb] += get_elo(tb, elo_dict) / 1000
+            except Exception as e:
+                # FIX 4: was 'get_elo(team) / 1000' — verkeerde schaal (~1.5–2.0) t.o.v.
+                # echte wedstrijdpunten (~0.5–2.5). Vervangen door neutrale 1-punt fallback
+                # (overeenkomend met een verwacht gelijkspel).
+                print(f"  [bracket] Fallback voor {ta} vs {tb} in groep {group}: {e}")
+                expected_pts[ta] += 1.0
+                expected_pts[tb] += 1.0
 
     ranked = sorted(unique_teams,
                     key=lambda t: (expected_pts[t], expected_gd[t]),
                     reverse=True)
-    return ranked
+    return ranked, expected_pts, expected_gd
 
 
 def predict_bracket(resources: dict = None) -> dict:
@@ -139,16 +147,18 @@ def predict_bracket(resources: dict = None) -> dict:
 
     for group in "ABCDEFGHIJKL":
         if group not in winners:
-            ranked = _predict_group_standings(group, matches_df, resources)
+            # FIX 2: unpack tuple — was 'ranked = ...' (list only); nu ook pts/gd beschikbaar
+            ranked, exp_pts, exp_gd = _predict_group_standings(group, matches_df, resources)
             if len(ranked) >= 3:
-                # Gebruik gesimuleerde score als proxy voor pts/gd
+                # FIX 2: vervang hardcoded (4, 0, 3) door werkelijk gesimuleerde waarden
+                # zodat de ranking van beste derden teamsterkte weerspiegelt.
                 winners[group] = {
                     "winner":    ranked[0],
                     "runner_up": ranked[1],
                     "third":     ranked[2],
-                    "third_pts": 4,   # schatting voor derde
-                    "third_gd":  0,
-                    "third_gf":  3,
+                    "third_pts": exp_pts[ranked[2]],
+                    "third_gd":  exp_gd[ranked[2]],
+                    "third_gf":  0,  # goals-for niet getrackt in simulatie; neutrale waarde
                 }
             elif len(ranked) == 2:
                 winners[group] = {
@@ -175,18 +185,28 @@ def predict_bracket(resources: dict = None) -> dict:
     thirds_sorted = sorted(thirds,
                            key=lambda x: (x["pts"], x["gd"], x["gf"]),
                            reverse=True)
-    best8_thirds = [t["team"] for t in thirds_sorted[:8]]
+    best8_thirds_info = thirds_sorted[:8]
     # Vul aan met TBD als minder dan 8 thirds bekend zijn
-    while len(best8_thirds) < 8:
-        best8_thirds.append("TBD")
+    while len(best8_thirds_info) < 8:
+        best8_thirds_info.append({"team": "TBD", "group": "?", "pts": 0, "gd": 0, "gf": 0})
 
-    def play(team_a: str, team_b: str) -> str:
+    def play(team_a: str, team_b: str) -> dict:
         if team_a == "TBD":
-            return team_b
+            return {"team_a": team_a, "team_b": team_b, "winner": team_b, "score": (0, 0), "win_a": 0, "win_b": 100, "draw": 0}
         if team_b == "TBD":
-            return team_a
-        result = predict_match(team_a, team_b, knockout=True, n=25_000, resources=resources)
-        return result["winner"]
+            return {"team_a": team_a, "team_b": team_b, "winner": team_a, "score": (0, 0), "win_a": 100, "win_b": 0, "draw": 0}
+        r = predict_match(team_a, team_b, knockout=True, n=25_000, resources=resources)
+        return {
+            "team_a": team_a,
+            "team_b": team_b,
+            "winner": r["winner"],
+            "score": r["most_likely_score"],
+            "win_a": r["win_home"],
+            "win_b": r["win_away"],
+            "draw": r["draw"],
+            "exp_home": r["exp_goals_home"],
+            "exp_away": r["exp_goals_away"],
+        }
 
     def g(group: str, pos: str) -> str:
         if group not in winners:
@@ -194,75 +214,97 @@ def predict_bracket(resources: dict = None) -> dict:
         return winners[group].get({"1": "winner", "2": "runner_up", "3": "third"}.get(pos, "winner"), "TBD") or "TBD"
 
     # ── Stap 3: Round of 32 ────────────────────────────────────────────────────
-    # 12 standaard matchups: winnaar vs runner-up uit naast-liggende groepen
-    # 4 extra matchups: beste 8 derde plaatsen (geseeded: 1v8, 2v7, 3v6, 4v5)
-    standard_matchups = [
-        (g("A","1"), g("B","2")),
-        (g("C","1"), g("D","2")),
-        (g("E","1"), g("F","2")),
-        (g("G","1"), g("H","2")),
-        (g("I","1"), g("J","2")),
-        (g("K","1"), g("L","2")),
-        (g("B","1"), g("A","2")),
-        (g("D","1"), g("C","2")),
-        (g("F","1"), g("E","2")),
-        (g("H","1"), g("G","2")),
-        (g("J","1"), g("I","2")),
-        (g("L","1"), g("K","2")),
-    ]
-    thirds_matchups = [
-        (best8_thirds[0], best8_thirds[7]),
-        (best8_thirds[1], best8_thirds[6]),
-        (best8_thirds[2], best8_thirds[5]),
-        (best8_thirds[3], best8_thirds[4]),
-    ]
-    all_r32_matchups = standard_matchups + thirds_matchups
+    # Gebruik officiële fixtures uit matches.csv als die er staan (stage == "R32"),
+    # anders fallback naar berekening op basis van groepsstand.
+    r32_fixture_rows = matches_df[matches_df["stage"] == "R32"]
+
+    if len(r32_fixture_rows) >= 16:
+        all_r32_matchups = [
+            (row["home"], row["away"])
+            for _, row in r32_fixture_rows.sort_values("match_id").iterrows()
+        ]
+    else:
+        standard_matchups = [
+            (g("A","1"), g("B","2")),
+            (g("C","1"), g("D","2")),
+            (g("E","1"), g("F","2")),
+            (g("G","1"), g("H","2")),
+            (g("I","1"), g("J","2")),
+            (g("K","1"), g("L","2")),
+            (g("B","1"), g("A","2")),
+            (g("D","1"), g("C","2")),
+            (g("F","1"), g("E","2")),
+            (g("H","1"), g("G","2")),
+            (g("J","1"), g("I","2")),
+            (g("L","1"), g("K","2")),
+        ]
+        thirds_by_group = sorted(best8_thirds_info, key=lambda t: t["group"])
+        thirds_ordered  = [t["team"] for t in thirds_by_group]
+        while len(thirds_ordered) < 8:
+            thirds_ordered.append("TBD")
+        thirds_matchups = [
+            (thirds_ordered[0], thirds_ordered[7]),
+            (thirds_ordered[1], thirds_ordered[6]),
+            (thirds_ordered[2], thirds_ordered[5]),
+            (thirds_ordered[3], thirds_ordered[4]),
+        ]
+        all_r32_matchups = standard_matchups + thirds_matchups
 
     print("\n── Round of 32 ──────────────────────────────")
-    r32_winners = []
+    r32_matchups = []
+    r32_winners  = []
     for a, b in all_r32_matchups:
-        w = play(a, b)
-        r32_winners.append(w)
-        print(f"  {a:<22} vs {b:<22} → {w}")
+        m = play(a, b)
+        r32_matchups.append(m)
+        r32_winners.append(m["winner"])
+        print(f"  {a:<22} vs {b:<22} → {m['score'][0]}-{m['score'][1]} → {m['winner']}")
 
     print("\n── Round of 16 ──────────────────────────────")
-    r16_winners = []
+    r16_matchups = []
+    r16_winners  = []
     for i in range(0, len(r32_winners), 2):
         a = r32_winners[i]
         b = r32_winners[i+1] if i+1 < len(r32_winners) else "TBD"
-        w = play(a, b)
-        r16_winners.append(w)
-        print(f"  {a:<22} vs {b:<22} → {w}")
+        m = play(a, b)
+        r16_matchups.append(m)
+        r16_winners.append(m["winner"])
+        print(f"  {a:<22} vs {b:<22} → {m['score'][0]}-{m['score'][1]} → {m['winner']}")
 
     print("\n── Kwartfinales ─────────────────────────────")
-    qf_winners = []
+    qf_matchups = []
+    qf_winners  = []
     for i in range(0, len(r16_winners), 2):
         a = r16_winners[i]
         b = r16_winners[i+1] if i+1 < len(r16_winners) else "TBD"
-        w = play(a, b)
-        qf_winners.append(w)
-        print(f"  {a:<22} vs {b:<22} → {w}")
+        m = play(a, b)
+        qf_matchups.append(m)
+        qf_winners.append(m["winner"])
+        print(f"  {a:<22} vs {b:<22} → {m['score'][0]}-{m['score'][1]} → {m['winner']}")
 
     print("\n── Halve finales ────────────────────────────")
-    sf_winners = []
-    sf_losers  = []
+    sf_matchups = []
+    sf_winners  = []
+    sf_losers   = []
     for i in range(0, len(qf_winners), 2):
         a = qf_winners[i]
         b = qf_winners[i+1] if i+1 < len(qf_winners) else "TBD"
-        result = predict_match(a, b, knockout=True, n=25_000, resources=resources)
-        w = result["winner"]
+        m = play(a, b)
+        sf_matchups.append(m)
+        w = m["winner"]
         l = b if w == a else a
         sf_winners.append(w)
         sf_losers.append(l)
-        print(f"  {a:<22} vs {b:<22} → {w}")
+        print(f"  {a:<22} vs {b:<22} → {m['score'][0]}-{m['score'][1]} → {w}")
 
     finalist_a = sf_winners[0] if len(sf_winners) > 0 else "TBD"
     finalist_b = sf_winners[1] if len(sf_winners) > 1 else "TBD"
     third_a    = sf_losers[0]  if len(sf_losers) > 0  else "TBD"
     third_b    = sf_losers[1]  if len(sf_losers) > 1  else "TBD"
 
-    champion    = play(finalist_a, finalist_b)
-    third_place = play(third_a, third_b)
+    final_match      = play(finalist_a, finalist_b)
+    third_match      = play(third_a, third_b)
+    champion         = final_match["winner"]
+    third_place      = third_match["winner"]
 
     print(f"\n── Finale ───────────────────────────────────")
     print(f"  {finalist_a:<22} vs {finalist_b:<22} → 🏆 {champion}")
@@ -270,14 +312,21 @@ def predict_bracket(resources: dict = None) -> dict:
     print(f"  {third_a:<22} vs {third_b:<22} → {third_place}")
 
     return {
-        "r32":        r32_winners,
-        "r16":        r16_winners,
-        "qf":         qf_winners,
-        "sf":         sf_winners,
-        "finalist_a": finalist_a,
-        "finalist_b": finalist_b,
-        "champion":   champion,
-        "third":      third_place,
+        "r32_matchups": r32_matchups,
+        "r16_matchups": r16_matchups,
+        "qf_matchups":  qf_matchups,
+        "sf_matchups":  sf_matchups,
+        "final_match":  final_match,
+        "third_match":  third_match,
+        # legacy lists (voor backward compat)
+        "r32":          r32_winners,
+        "r16":          r16_winners,
+        "qf":           qf_winners,
+        "sf":           sf_winners,
+        "finalist_a":   finalist_a,
+        "finalist_b":   finalist_b,
+        "champion":     champion,
+        "third":        third_place,
     }
 
 
