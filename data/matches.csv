@@ -71,13 +71,13 @@ match_id,date,time,group,stage,home,away,home_score,away_score,played
 70,2026-06-28,01:30,K,group,DR Congo,Uzbekistan,3.0,1.0,1
 71,2026-06-28,04:00,J,group,Algeria,Austria,3.0,3.0,1
 72,2026-06-28,04:00,J,group,Jordan,Argentina,1.0,3.0,1
-73,2026-06-28,21:00,R32,R32,South Africa,Canada,,,0
-74,2026-06-29,00:00,R32,R32,Germany,Paraguay,,,0
-75,2026-06-29,03:00,R32,R32,Netherlands,Morocco,,,0
-76,2026-06-29,22:00,R32,R32,Brazil,Japan,,,0
-77,2026-06-30,00:00,R32,R32,France,Sweden,,,0
-78,2026-06-30,03:00,R32,R32,Ivory Coast,Norway,,,0
-79,2026-06-30,22:00,R32,R32,Mexico,Ecuador,,,0
+73,2026-06-28,21:00,R32,R32,South Africa,Canada,0.0,1.0,1
+74,2026-06-29,00:00,R32,R32,Germany,Paraguay,1.0,1.0,1
+75,2026-06-29,03:00,R32,R32,Netherlands,Morocco,1.0,1.0,1
+76,2026-06-29,22:00,R32,R32,Brazil,Japan,2.0,1.0,1
+77,2026-06-30,00:00,R32,R32,France,Sweden,3.0,0.0,1
+78,2026-06-30,03:00,R32,R32,Ivory Coast,Norway,1.0,2.0,1
+79,2026-06-30,22:00,R32,R32,Mexico,Ecuador,2.0,0.0,1
 80,2026-07-01,00:00,R32,R32,England,DR Congo,,,0
 81,2026-07-01,03:00,R32,R32,USA,Bosnia and Herzegovina,,,0
 82,2026-07-01,22:00,R32,R32,Belgium,Senegal,,,0
