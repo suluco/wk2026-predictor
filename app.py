@@ -265,6 +265,44 @@ with tab3:
     st.markdown('<p class="muted">Na elke wedstrijd voer je de uitslag in — Elo en teamsterktes worden automatisch bijgewerkt.</p>', unsafe_allow_html=True)
 
     matches_df3 = get_matches()
+
+    # ── Sectie A: strafschoppen invoeren voor gespeeld gelijkspel in KO ───────
+    if "penalty_winner" in matches_df3.columns:
+        ko_tied = matches_df3[
+            (matches_df3["played"] == 1) &
+            (matches_df3["stage"] != "group") &
+            (matches_df3["home_score"] == matches_df3["away_score"]) &
+            (matches_df3["penalty_winner"].fillna("").astype(str).str.strip() == "")
+        ]
+    else:
+        ko_tied = pd.DataFrame()
+
+    if not ko_tied.empty:
+        st.warning(f"⚠️ {len(ko_tied)} knockout-wedstrijd(en) eindigden gelijk — voeg de strafschoppenwinnaar toe:")
+        for _, trow in ko_tied.iterrows():
+            with st.form(key=f"pk_form_{trow['match_id']}"):
+                st.markdown(f"**{flag(trow['home'])} {trow['home']} {int(trow['home_score'])}–{int(trow['away_score'])} {flag(trow['away'])} {trow['away']}** (na verlengingen)")
+                pk_winner = st.radio(
+                    "Winnaar na strafschoppen",
+                    [trow["home"], trow["away"]],
+                    horizontal=True,
+                    key=f"pk_{trow['match_id']}"
+                )
+                if st.form_submit_button("✅ OPSLAAN"):
+                    record_result(int(trow["match_id"]),
+                                  int(trow["home_score"]),
+                                  int(trow["away_score"]),
+                                  penalty_winner=str(pk_winner))
+                    from engine.auto_updater import propagate_knockout_fixtures
+                    propagate_knockout_fixtures()
+                    st.cache_data.clear()
+                    st.cache_resource.clear()
+                    st.success(f"✓ {pk_winner} als winnaar na strafschoppen opgeslagen.")
+                    st.rerun()
+
+        st.divider()
+
+    # ── Sectie B: nieuwe uitslag invoeren ─────────────────────────────────────
     unplayed = matches_df3[
         (matches_df3["played"] == 0) &
         (matches_df3["home"] != "TBD") &
@@ -281,6 +319,7 @@ with tab3:
 
         sel_id  = st.selectbox("Wedstrijd", list(result_labels.keys()), format_func=lambda x: result_labels[x])
         sel_row = unplayed[unplayed["match_id"] == sel_id].iloc[0]
+        is_knockout = str(sel_row.get("stage", "group")) != "group"
 
         rc1, rc2, rc3 = st.columns([2, 1, 2])
         with rc1:
@@ -292,8 +331,22 @@ with tab3:
             st.markdown(f"**{flag(sel_row['away'])} {sel_row['away']}**")
             away_score = st.number_input("Goals uit", min_value=0, max_value=20, value=0, key="as")
 
+        # Strafschoppen selector alleen zichtbaar als KO + gelijkspel
+        pen_winner = ""
+        if is_knockout and home_score == away_score:
+            st.markdown('<p class="muted">Gelijkspel in knockout-fase — wie wint de strafschoppen?</p>', unsafe_allow_html=True)
+            pen_winner = st.radio(
+                "Winnaar na strafschoppen",
+                [sel_row["home"], sel_row["away"]],
+                horizontal=True,
+                key="pen_winner_new"
+            )
+
         if st.button("✅ UITSLAG OPSLAAN & MODEL UPDATEN"):
-            record_result(int(sel_id), int(home_score), int(away_score))
+            record_result(int(sel_id), int(home_score), int(away_score), penalty_winner=pen_winner)
+            if is_knockout:
+                from engine.auto_updater import propagate_knockout_fixtures
+                propagate_knockout_fixtures()
             st.cache_data.clear()
             st.cache_resource.clear()
             st.success(f"✓ {sel_row['home']} {home_score}–{away_score} {sel_row['away']} opgeslagen. Elo en teamsterktes bijgewerkt.")

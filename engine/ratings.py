@@ -72,15 +72,14 @@ def retrain_model() -> None:
     _retrain()
 
 
-def record_result(match_id: int, home_score: int, away_score: int, retrain: bool = True):
+def record_result(match_id: int, home_score: int, away_score: int,
+                  retrain: bool = True, penalty_winner: str = ""):
     """
     Verwerk een gespeelde uitslag:
-    1. Schrijf naar matches.csv
+    1. Schrijf naar matches.csv (incl. optionele penalty_winner bij gelijkspel in KO)
     2. Update teamsterktes (attack/defense/form)
     3. Update Elo-ratings
     4. Hertraineer ML-model (alleen als retrain=True)
-    FIX 5: parameter retrain=True toegevoegd zodat batch-verwerking in auto_updater
-    stap 4 kan overslaan en het model eenmalig hertrainent na de volledige batch.
     """
     from engine.simulator import load_teams
 
@@ -97,9 +96,13 @@ def record_result(match_id: int, home_score: int, away_score: int, retrain: bool
     away = row["away"]
 
     # 1. matches.csv updaten
-    matches_df.loc[mask, "home_score"] = home_score
-    matches_df.loc[mask, "away_score"] = away_score
-    matches_df.loc[mask, "played"]     = 1
+    if "penalty_winner" not in matches_df.columns:
+        matches_df["penalty_winner"] = ""
+    matches_df.loc[mask, "home_score"]     = home_score
+    matches_df.loc[mask, "away_score"]     = away_score
+    matches_df.loc[mask, "played"]         = 1
+    if penalty_winner:
+        matches_df.loc[mask, "penalty_winner"] = penalty_winner
     matches_df.to_csv(DATA_DIR / "matches.csv", index=False)
     print(f"\n✓ Uitslag opgeslagen: {home} {home_score}–{away_score} {away}")
 

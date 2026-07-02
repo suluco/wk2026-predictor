@@ -195,6 +195,36 @@ def predict_bracket(resources: dict = None) -> dict:
             return {"team_a": team_a, "team_b": team_b, "winner": team_b, "score": (0, 0), "win_a": 0, "win_b": 100, "draw": 0}
         if team_b == "TBD":
             return {"team_a": team_a, "team_b": team_b, "winner": team_a, "score": (0, 0), "win_a": 100, "win_b": 0, "draw": 0}
+
+        # Gebruik de werkelijke uitslag als de wedstrijd al gespeeld is
+        played_row = matches_df[
+            (matches_df["played"] == 1) &
+            (matches_df["stage"] != "group") &
+            (
+                ((matches_df["home"] == team_a) & (matches_df["away"] == team_b)) |
+                ((matches_df["home"] == team_b) & (matches_df["away"] == team_a))
+            )
+        ]
+        if not played_row.empty:
+            row = played_row.iloc[0]
+            hs  = int(row["home_score"])
+            as_ = int(row["away_score"])
+            a_score = hs if row["home"] == team_a else as_
+            b_score = as_ if row["home"] == team_a else hs
+            if a_score != b_score:
+                winner = team_a if a_score > b_score else team_b
+            else:
+                # Verlengingen gelijkspel: check penalty_winner kolom
+                pw = str(row.get("penalty_winner", "")).strip()
+                winner = pw if pw and pw in (team_a, team_b) else team_a
+            return {
+                "team_a": team_a, "team_b": team_b, "winner": winner,
+                "score": (a_score, b_score),
+                "win_a": 100 if winner == team_a else 0,
+                "win_b": 100 if winner == team_b else 0,
+                "draw": 0, "actual": True,
+            }
+
         r = predict_match(team_a, team_b, knockout=True, n=25_000, resources=resources)
         return {
             "team_a": team_a,

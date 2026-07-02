@@ -200,6 +200,111 @@ def manual_update_tbd(group: str, team_name: str):
     else:
         print(f"  Geen TBDs gevonden in groep {group}")
 
+# ── Knockout fixture propagatie ───────────────────────────────────────────────
+# Elke tuple: (stage, match_id_A, match_id_B, volgende_match_id, datum, tijd, use_losers)
+# use_losers=True → troostfinale (verliezers spelen), anders winnaars.
+_KO_PAIRS = [
+    ("R16", 73,  74,  89,  "2026-07-06", "21:00", False),
+    ("R16", 75,  76,  90,  "2026-07-07", "00:00", False),
+    ("R16", 77,  78,  91,  "2026-07-07", "21:00", False),
+    ("R16", 79,  80,  92,  "2026-07-08", "00:00", False),
+    ("R16", 81,  82,  93,  "2026-07-08", "21:00", False),
+    ("R16", 83,  84,  94,  "2026-07-09", "00:00", False),
+    ("R16", 85,  86,  95,  "2026-07-09", "21:00", False),
+    ("R16", 87,  88,  96,  "2026-07-10", "00:00", False),
+    ("QF",  89,  90,  97,  "2026-07-12", "21:00", False),
+    ("QF",  91,  92,  98,  "2026-07-12", "00:00", False),
+    ("QF",  93,  94,  99,  "2026-07-13", "21:00", False),
+    ("QF",  95,  96,  100, "2026-07-13", "00:00", False),
+    ("SF",  97,  98,  101, "2026-07-16", "21:00", False),
+    ("SF",  99,  100, 102, "2026-07-17", "21:00", False),
+    ("3PL", 101, 102, 104, "2026-07-21", "21:00", True),   # troostfinale: verliezers
+    ("F",   101, 102, 103, "2026-07-22", "21:00", False),  # finale: winnaars
+]
+
+
+def _ko_winner(row: pd.Series) -> str:
+    """Geeft de winnaar van een gespeelde knockout-wedstrijd terug, of '' bij onduidelijkheid."""
+    try:
+        hs  = int(float(str(row["home_score"])))
+        as_ = int(float(str(row["away_score"])))
+    except (ValueError, TypeError):
+        return ""
+    if hs > as_:
+        return str(row["home"])
+    if as_ > hs:
+        return str(row["away"])
+    # Gelijkspel na verlengingen: check penalty_winner kolom
+    pw = str(row.get("penalty_winner", "")).strip()
+    return pw if pw and pw not in ("nan", "") else ""
+
+
+def _ko_loser(row: pd.Series) -> str:
+    """Geeft de verliezer van een gespeelde knockout-wedstrijd terug."""
+    winner = _ko_winner(row)
+    if not winner:
+        return ""
+    return str(row["away"]) if winner == str(row["home"]) else str(row["home"])
+
+
+def propagate_knockout_fixtures() -> int:
+    """
+    Voeg de volgende knockout-ronde fixtures toe aan matches.csv zodra
+    beide voorgaande wedstrijden in een bracket-paar gespeeld zijn.
+
+    Werkt door alle ronden heen: R32→R16→QF→SF→Finale+Troostfinale.
+    Veilig om meerdere keren te draaien: bestaande fixtures worden overgeslagen.
+    Geeft het aantal nieuw toegevoegde fixtures terug.
+    """
+    matches_df = pd.read_csv(DATA_DIR / "matches.csv")
+    added      = 0
+
+    for stage, id_a, id_b, next_id, datum, tijd, use_losers in _KO_PAIRS:
+        # Al ingepland?
+        if (matches_df["match_id"] == next_id).any():
+            continue
+
+        row_a = matches_df[matches_df["match_id"] == id_a]
+        row_b = matches_df[matches_df["match_id"] == id_b]
+
+        if row_a.empty or row_b.empty:
+            continue
+        if int(row_a.iloc[0]["played"]) != 1 or int(row_b.iloc[0]["played"]) != 1:
+            continue
+
+        get_team = _ko_loser if use_losers else _ko_winner
+        team_home = get_team(row_a.iloc[0])
+        team_away = get_team(row_b.iloc[0])
+
+        if not team_home or not team_away:
+            print(f"  ⚠️  Winnaar van match {id_a} of {id_b} onduidelijk — voeg {stage} fixture {next_id} handmatig toe")
+            continue
+
+        new_row = pd.DataFrame([{
+            "match_id":   next_id,
+            "date":       datum,
+            "time":       tijd,
+            "group":      stage,
+            "stage":      stage,
+            "home":       team_home,
+            "away":       team_away,
+            "home_score": "",
+            "away_score": "",
+            "played":     0,
+        }])
+        matches_df = pd.concat([matches_df, new_row], ignore_index=True)
+        print(f"  ✓ {stage} fixture toegevoegd (match {next_id}): {team_home} vs {team_away} — {datum}")
+        added += 1
+
+    if added > 0:
+        matches_df.to_csv(DATA_DIR / "matches.csv", index=False)
+        print(f"\n✓ {added} nieuwe knockout fixture(s) aan matches.csv toegevoegd")
+    else:
+        print("  Geen nieuwe fixtures te propageren")
+
+    return added
+
+
 # ── Hoofdfunctie ──────────────────────────────────────────────────────────────
 
 def run_daily_update():
@@ -224,10 +329,14 @@ def run_daily_update():
     else:
         print("   ⚠️  Geen data beschikbaar — handmatig invullen via update_tbds.py")
 
-    # 4. Status
+    # 4. Volgende ronde fixtures propageren op basis van bekende winnaars
+    print("\n4. Volgende ronde fixtures bepalen...")
+    propagate_knockout_fixtures()
+
+    # 5. Status
     print_status()
     print(f"\n{'='*50}\n")
-    
+
 if __name__ == "__main__":
     import sys
 
@@ -235,5 +344,7 @@ if __name__ == "__main__":
         group = sys.argv[2].upper()
         team  = sys.argv[3]
         manual_update_tbd(group, team)
+    elif len(sys.argv) == 2 and sys.argv[1] == "propagate":
+        propagate_knockout_fixtures()
     else:
         run_daily_update()
