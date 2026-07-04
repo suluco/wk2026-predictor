@@ -289,12 +289,26 @@ def predict_bracket(resources: dict = None) -> dict:
         r32_winners.append(m["winner"])
         print(f"  {a:<22} vs {b:<22} → {m['score'][0]}-{m['score'][1]} → {m['winner']}")
 
+    # ── Stap 4: Round of 16 ───────────────────────────────────────────────────
+    # Gebruik officiële fixtures uit matches.csv als die er staan (stage == "R16"),
+    # anders pair sequentieel de R32-winnaars (fallback).
+    r16_fixture_rows = matches_df[matches_df["stage"] == "R16"]
+
+    if len(r16_fixture_rows) >= 8:
+        all_r16_matchups = [
+            (row["home"], row["away"])
+            for _, row in r16_fixture_rows.sort_values("match_id").iterrows()
+        ]
+    else:
+        all_r16_matchups = [
+            (r32_winners[i], r32_winners[i+1] if i+1 < len(r32_winners) else "TBD")
+            for i in range(0, len(r32_winners), 2)
+        ]
+
     print("\n── Round of 16 ──────────────────────────────")
     r16_matchups = []
     r16_winners  = []
-    for i in range(0, len(r32_winners), 2):
-        a = r32_winners[i]
-        b = r32_winners[i+1] if i+1 < len(r32_winners) else "TBD"
+    for a, b in all_r16_matchups:
         m = play(a, b)
         r16_matchups.append(m)
         r16_winners.append(m["winner"])

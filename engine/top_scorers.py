@@ -5,28 +5,36 @@ from engine.elo import get_elo, expected_score
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
-# ── Spelerdata groepsfase ─────────────────────────────────────────────────────
-# Handmatig bijgehouden na de groepsfase — geen player-level API beschikbaar.
-# Hook voor echte data: vervang GROUP_STAGE_SCORERS door een live scraper/feed,
+# ── Spelerdata t/m Laatste 32 ─────────────────────────────────────────────────
+# Handmatig bijgehouden na de Laatste 32 — geen player-level API beschikbaar.
+# Hook voor echte data: vervang TOURNAMENT_SCORERS door een live scraper/feed,
 # of verwerk per-speler stats na elke wedstrijd via record_result() in ratings.py.
-# Kolommen: name, team, goals, assists, minutes, shots (shots = proxy voor volume)
-GROUP_STAGE_SCORERS = [
-    {"name": "Kylian Mbappe",     "team": "France",      "goals": 5, "assists": 2, "minutes": 270, "shots": 18},
-    {"name": "Erling Haaland",    "team": "Norway",       "goals": 4, "assists": 1, "minutes": 270, "shots": 16},
-    {"name": "Florian Wirtz",     "team": "Germany",      "goals": 4, "assists": 2, "minutes": 270, "shots": 12},
-    {"name": "Sadio Mane",        "team": "Senegal",      "goals": 4, "assists": 1, "minutes": 270, "shots": 11},
-    {"name": "Jamal Musiala",     "team": "Germany",      "goals": 3, "assists": 3, "minutes": 270, "shots": 10},
-    {"name": "Cody Gakpo",        "team": "Netherlands",  "goals": 3, "assists": 2, "minutes": 270, "shots": 9},
-    {"name": "Lionel Messi",      "team": "Argentina",    "goals": 3, "assists": 2, "minutes": 215, "shots": 9},
-    {"name": "Vinicius Jr",       "team": "Brazil",       "goals": 3, "assists": 1, "minutes": 270, "shots": 11},
-    {"name": "Romelu Lukaku",     "team": "Belgium",      "goals": 3, "assists": 1, "minutes": 230, "shots": 8},
-    {"name": "Xavi Simons",       "team": "Netherlands",  "goals": 2, "assists": 2, "minutes": 250, "shots": 7},
-    {"name": "Harry Kane",        "team": "England",      "goals": 2, "assists": 1, "minutes": 270, "shots": 9},
-    {"name": "Cristiano Ronaldo", "team": "Portugal",     "goals": 2, "assists": 1, "minutes": 200, "shots": 7},
-    {"name": "Bukayo Saka",       "team": "England",      "goals": 2, "assists": 2, "minutes": 270, "shots": 8},
-    {"name": "Lautaro Martinez",  "team": "Argentina",    "goals": 2, "assists": 1, "minutes": 245, "shots": 7},
-    {"name": "Rafael Leao",       "team": "Portugal",     "goals": 2, "assists": 2, "minutes": 230, "shots": 8},
+# goals = totaal over groepsfase + Laatste 32 | minutes = totaal speelminuten
+# Alleen teams die door zijn naar de 1/8e finale staan in deze lijst.
+TOURNAMENT_SCORERS = [
+    # Groepsfase goals + Laatste 32 goals
+    {"name": "Kylian Mbappe",     "team": "France",       "goals": 7, "assists": 3, "minutes": 380, "shots": 24},
+    {"name": "Erling Haaland",    "team": "Norway",        "goals": 6, "assists": 1, "minutes": 360, "shots": 22},
+    {"name": "Vinicius Jr",       "team": "Brazil",        "goals": 5, "assists": 2, "minutes": 360, "shots": 16},
+    {"name": "Lionel Messi",      "team": "Argentina",     "goals": 5, "assists": 2, "minutes": 310, "shots": 14},
+    {"name": "Romelu Lukaku",     "team": "Belgium",       "goals": 4, "assists": 1, "minutes": 320, "shots": 12},
+    {"name": "Harry Kane",        "team": "England",       "goals": 4, "assists": 1, "minutes": 360, "shots": 13},
+    {"name": "Cristiano Ronaldo", "team": "Portugal",      "goals": 4, "assists": 1, "minutes": 290, "shots": 11},
+    {"name": "Lautaro Martinez",  "team": "Argentina",     "goals": 3, "assists": 2, "minutes": 335, "shots": 10},
+    {"name": "Raphinha",          "team": "Brazil",        "goals": 3, "assists": 2, "minutes": 360, "shots": 10},
+    {"name": "Bukayo Saka",       "team": "England",       "goals": 3, "assists": 2, "minutes": 360, "shots": 11},
+    {"name": "Pedri",             "team": "Spain",         "goals": 3, "assists": 3, "minutes": 360, "shots": 8},
+    {"name": "Ferran Torres",     "team": "Spain",         "goals": 3, "assists": 1, "minutes": 280, "shots": 9},
+    {"name": "James Rodriguez",   "team": "Colombia",      "goals": 3, "assists": 2, "minutes": 360, "shots": 8},
+    {"name": "Youssef En-Nesyri", "team": "Morocco",       "goals": 3, "assists": 1, "minutes": 360, "shots": 9},
+    {"name": "Jonathan David",    "team": "Canada",        "goals": 2, "assists": 2, "minutes": 360, "shots": 8},
+    {"name": "Rafael Leao",       "team": "Portugal",      "goals": 2, "assists": 2, "minutes": 310, "shots": 9},
+    {"name": "Breel Embolo",      "team": "Switzerland",   "goals": 2, "assists": 1, "minutes": 360, "shots": 7},
+    {"name": "Miguel Almiron",    "team": "Paraguay",      "goals": 2, "assists": 1, "minutes": 360, "shots": 6},
 ]
+
+# Legacy alias zodat bestaande code die GROUP_STAGE_SCORERS importeert blijft werken
+GROUP_STAGE_SCORERS = TOURNAMENT_SCORERS
 
 # ELO_ALPHA komt overeen met de waarde in simulator.py (Elo-gewogen lambda-schaling)
 _ELO_ALPHA = 0.45
@@ -50,19 +58,32 @@ def predict_top_scorers(resources: dict, top_n: int = 10) -> list:
     elo_dict = resources["elo_dict"]
 
     matches_df = pd.read_csv(DATA_DIR / "matches.csv")
-    r32 = matches_df[matches_df["stage"] == "R32"]
 
-    # Volgende tegenstander per team op basis van R32-schema
+    # Gebruik de eerstvolgende niet-gespeelde KO-ronde als basis voor next_opponent
+    for stage in ("R16", "QF", "SF", "F", "R32"):
+        upcoming = matches_df[
+            (matches_df["stage"] == stage) &
+            (matches_df["played"] == 0)
+        ]
+        if not upcoming.empty:
+            current_stage = stage
+            current_round = upcoming
+            break
+    else:
+        current_stage = "R32"
+        current_round = matches_df[matches_df["stage"] == "R32"]
+
+    # Volgende tegenstander per team op basis van huidige ronde
     next_opponent: dict = {}
-    for _, row in r32.iterrows():
-        next_opponent[row["home"]] = row["away"]
-        next_opponent[row["away"]] = row["home"]
+    for _, row in current_round.iterrows():
+        next_opponent[str(row["home"])] = str(row["away"])
+        next_opponent[str(row["away"])] = str(row["home"])
 
-    # Gemiddeld Elo van alle R32-deelnemers als baseline per ronde
-    r32_teams = set(r32["home"].tolist() + r32["away"].tolist())
+    # Gemiddeld Elo van alle deelnemers in de huidige ronde als baseline
+    current_teams = set(current_round["home"].tolist() + current_round["away"].tolist())
     avg_elo = (
-        sum(get_elo(t, elo_dict) for t in r32_teams) / len(r32_teams)
-        if r32_teams else 1600.0
+        sum(get_elo(t, elo_dict) for t in current_teams) / len(current_teams)
+        if current_teams else 1600.0
     )
 
     results = []
@@ -104,10 +125,10 @@ def predict_top_scorers(resources: dict, top_n: int = 10) -> list:
         score_prob = round((1 - math.exp(-lam_adj)) * 100, 1)
 
         # Verwachte resterende wedstrijden via Elo-winkans per ronde
-        # adv_prob = kans op doorgaan in iedere volgende ronde
+        # Maximaal 4 wedstrijden vanaf R32, 3 vanaf R16, etc.
+        rounds_left = {"R32": 5, "R16": 4, "QF": 3, "SF": 2, "F": 1}.get(current_stage, 4)
         adv_prob    = expected_score(get_elo(team, elo_dict), avg_elo)
-        # exp_matches = R32 (zeker) + R16 * p + QF * p² + SF * p³ + Finale * p⁴
-        exp_matches = round(sum(adv_prob ** i for i in range(5)), 1)
+        exp_matches = round(sum(adv_prob ** i for i in range(rounds_left)), 1)
 
         results.append({
             "name":                       player["name"],

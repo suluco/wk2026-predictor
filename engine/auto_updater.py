@@ -201,25 +201,23 @@ def manual_update_tbd(group: str, team_name: str):
         print(f"  Geen TBDs gevonden in groep {group}")
 
 # ── Knockout fixture propagatie ───────────────────────────────────────────────
+# R16 fixtures zijn nu expliciet in matches.csv (ids 89-96), net als R32.
+# Alleen QF, SF, Troostfinale en Finale worden hier auto-gepropageerd.
 # Elke tuple: (stage, match_id_A, match_id_B, volgende_match_id, datum, tijd, use_losers)
 # use_losers=True → troostfinale (verliezers spelen), anders winnaars.
 _KO_PAIRS = [
-    ("R16", 73,  74,  89,  "2026-07-06", "21:00", False),
-    ("R16", 75,  76,  90,  "2026-07-07", "00:00", False),
-    ("R16", 77,  78,  91,  "2026-07-07", "21:00", False),
-    ("R16", 79,  80,  92,  "2026-07-08", "00:00", False),
-    ("R16", 81,  82,  93,  "2026-07-08", "21:00", False),
-    ("R16", 83,  84,  94,  "2026-07-09", "00:00", False),
-    ("R16", 85,  86,  95,  "2026-07-09", "21:00", False),
-    ("R16", 87,  88,  96,  "2026-07-10", "00:00", False),
-    ("QF",  89,  90,  97,  "2026-07-12", "21:00", False),
-    ("QF",  91,  92,  98,  "2026-07-12", "00:00", False),
-    ("QF",  93,  94,  99,  "2026-07-13", "21:00", False),
-    ("QF",  95,  96,  100, "2026-07-13", "00:00", False),
-    ("SF",  97,  98,  101, "2026-07-16", "21:00", False),
-    ("SF",  99,  100, 102, "2026-07-17", "21:00", False),
-    ("3PL", 101, 102, 104, "2026-07-21", "21:00", True),   # troostfinale: verliezers
-    ("F",   101, 102, 103, "2026-07-22", "21:00", False),  # finale: winnaars
+    # QF — winnaars van R16 paren
+    ("QF",  89,  90,  97,  "2026-07-11", "21:00", False),  # winner(Canada/Morocco) vs winner(Paraguay/France)
+    ("QF",  91,  92,  98,  "2026-07-12", "00:00", False),  # winner(Brazil/Norway)  vs winner(Mexico/England)
+    ("QF",  93,  94,  99,  "2026-07-12", "21:00", False),  # winner(Portugal/Spain) vs winner(USA/Belgium)
+    ("QF",  95,  96,  100, "2026-07-13", "00:00", False),  # winner(Argentina/Egypt) vs winner(Switzerland/Colombia)
+    # SF
+    ("SF",  97,  98,  101, "2026-07-15", "21:00", False),
+    ("SF",  99,  100, 102, "2026-07-16", "21:00", False),
+    # Troostfinale (verliezers SF)
+    ("3PL", 101, 102, 103, "2026-07-19", "18:00", True),
+    # Finale (winnaars SF)
+    ("F",   101, 102, 104, "2026-07-19", "21:00", False),
 ]
 
 
