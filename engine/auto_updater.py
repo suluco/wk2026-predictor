@@ -140,7 +140,9 @@ def sync_results(wc_data: dict):
             # FIX 5: retrain=False — sla ML-hertraining over tijdens de batch;
             # was retrain=True (default), waardoor het model N keer hertrainde
             # voor N uitslagen terwijl elke run na de eerste identiek was.
-            record_result(match_id, g1, g2, retrain=False)
+            # git_sync=False: dit script draait als lokale/cron batch buiten
+            # Streamlit Cloud — geen los commit+push per uitslag nodig.
+            record_result(match_id, g1, g2, retrain=False, git_sync=False)
             matches_df = pd.read_csv(DATA_DIR / "matches.csv")  # reload
             new_results += 1
 
@@ -201,17 +203,13 @@ def manual_update_tbd(group: str, team_name: str):
         print(f"  Geen TBDs gevonden in groep {group}")
 
 # ── Knockout fixture propagatie ───────────────────────────────────────────────
-# R16 fixtures zijn nu expliciet in matches.csv (ids 89-96), net als R32.
-# Alleen QF, SF, Troostfinale en Finale worden hier auto-gepropageerd.
+# R16 (ids 89-96) en QF (ids 97-100) fixtures zijn nu expliciet in matches.csv,
+# net als R32. Alleen SF, Troostfinale en Finale worden hier auto-gepropageerd.
 # Elke tuple: (stage, match_id_A, match_id_B, volgende_match_id, datum, tijd, use_losers)
 # use_losers=True → troostfinale (verliezers spelen), anders winnaars.
 _KO_PAIRS = [
-    # QF — winnaars van R16 paren
-    ("QF",  89,  90,  97,  "2026-07-11", "21:00", False),  # winner(Canada/Morocco) vs winner(Paraguay/France)
-    ("QF",  91,  92,  98,  "2026-07-12", "00:00", False),  # winner(Brazil/Norway)  vs winner(Mexico/England)
-    ("QF",  93,  94,  99,  "2026-07-12", "21:00", False),  # winner(Portugal/Spain) vs winner(USA/Belgium)
-    ("QF",  95,  96,  100, "2026-07-13", "00:00", False),  # winner(Argentina/Egypt) vs winner(Switzerland/Colombia)
-    # SF
+    # SF — winnaars van QF paren (97=Frankrijk/Marokko, 98=Noorwegen/Engeland,
+    # 99=Spanje/België, 100=Argentinië/Zwitserland)
     ("SF",  97,  98,  101, "2026-07-15", "21:00", False),
     ("SF",  99,  100, 102, "2026-07-16", "21:00", False),
     # Troostfinale (verliezers SF)

@@ -108,6 +108,63 @@ streamlit run app.py
 
 ---
 
+## ☁️ Deploy naar Streamlit Cloud
+
+Streamlit Community Cloud draait de app op een **ephemeral filesystem** — elke
+container-restart (redeploy, slaapstand na inactiviteit, crash) wist lokale
+wijzigingen. `record_result()` commit + pusht daarom automatisch elke
+wijziging aan `matches.csv`, `teams.csv`, `elo_ratings.csv` en (bij hertraining)
+`model.pkl`/`scaler.pkl` terug naar deze repo (zie `engine/git_sync.py`) — de
+repo zelf is zo de enige bron van waarheid, niet de container. Bij het
+opstarten doet de app eerst een `git pull` (vóór `load_resources()`) zodat een
+update vanaf een ander device (bijv. mobiel) altijd wordt meegenomen.
+
+### Stappen
+
+1. **Push deze repo naar GitHub** (als dat nog niet zo is) — `origin` moet
+   naar jouw eigen repo wijzen, niet een fork-upstream.
+
+2. **Genereer een fine-grained GitHub Personal Access Token**:
+   - GitHub → Settings → Developer settings → Personal access tokens →
+     **Fine-grained tokens** → *Generate new token*
+   - **Repository access**: alleen deze repo (`suluco/wk2026-predictor`) —
+     niet "All repositories"
+   - **Permissions** → Repository permissions → **Contents**: `Read and write`
+     (dit is de enige scope die nodig is; laat alle andere permissions op
+     "No access")
+   - Zet een vervaldatum (bijv. 90 dagen — verleng na de vakantie desnoods)
+   - Kopieer het token direct na aanmaken — het is daarna niet meer zichtbaar
+
+3. **Koppel de repo op [share.streamlit.io](https://share.streamlit.io)**:
+   - *New app* → kies deze GitHub-repo, branch `main`, main file `app.py`
+
+4. **Zet het secret** — in de app-instellingen op share.streamlit.io:
+   *Settings → Secrets*, en voeg toe:
+   ```toml
+   GITHUB_TOKEN = "github_pat_xxxxxxxxxxxxxxxxxxxxxxxx"
+   ```
+   Zonder dit secret start de app nog gewoon op (leest de laatste staat die
+   al in de repo staat), maar elke nieuwe uitslag-invoer geeft een expliciete
+   foutmelding in de UI in plaats van stilzwijgend verloren te gaan.
+
+5. **Deploy**. Test daarna vanaf mobiel: voer een uitslag in via
+   "UITSLAG INVOEREN" — de app moet een groene bevestiging tonen. Check op
+   GitHub dat er een nieuwe commit staat met message
+   `Uitslag bijgewerkt: {match_id} - {timestamp}`.
+
+### Let op
+
+- Elke uitslag-invoer met hertraining commit ook `model.pkl` (~5MB) — de
+  git-geschiedenis groeit dus met elke invoer. Voor dit toernooi (±20-30
+  resultaat-invoeren) is dat geen probleem; voor langdurig/veelvuldig gebruik
+  is een externe modelopslag (bijv. alleen hertrainen na de groepsfase in
+  plaats van na elke wedstrijd) beter houdbaar.
+- Bij gelijktijdige invoer vanaf twee devices kan de push conflicteren (git
+  rebase-fout) — de UI toont dit dan als expliciete foutmelding. Ververs de
+  pagina (nieuwe `git pull`) en probeer opnieuw.
+
+---
+
 ## 🔢 Data bronnen
 
 | Data | Bron |

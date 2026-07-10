@@ -1,117 +1,33 @@
 {
-  "fetched_at": "2026-06-28T09:15:26.798218+00:00",
+  "fetched_at": "2026-07-08T20:40:20.214117+00:00",
   "odds": {
-    "South Africa||Canada": {
-      "win_a": 0.1626,
-      "draw": 0.2562,
-      "win_b": 0.5812,
-      "bookmakers": 25,
-      "commence_time": "2026-06-28T19:00:00Z"
-    },
-    "Brazil||Japan": {
-      "win_a": 0.5686,
-      "draw": 0.2503,
-      "win_b": 0.181,
-      "bookmakers": 25,
-      "commence_time": "2026-06-29T17:00:00Z"
-    },
-    "Germany||Paraguay": {
-      "win_a": 0.7029,
-      "draw": 0.1896,
-      "win_b": 0.1075,
-      "bookmakers": 25,
-      "commence_time": "2026-06-29T20:30:00Z"
-    },
-    "Netherlands||Morocco": {
-      "win_a": 0.4455,
-      "draw": 0.3017,
-      "win_b": 0.2528,
+    "France||Morocco": {
+      "win_a": 0.6083,
+      "draw": 0.2436,
+      "win_b": 0.1481,
       "bookmakers": 24,
-      "commence_time": "2026-06-30T01:00:00Z"
+      "commence_time": "2026-07-09T20:00:00Z"
     },
-    "Ivory Coast||Norway": {
-      "win_a": 0.2563,
-      "draw": 0.2707,
-      "win_b": 0.473,
-      "bookmakers": 25,
-      "commence_time": "2026-06-30T17:00:00Z"
+    "Spain||Belgium": {
+      "win_a": 0.5936,
+      "draw": 0.2384,
+      "win_b": 0.168,
+      "bookmakers": 23,
+      "commence_time": "2026-07-10T19:00:00Z"
     },
-    "France||Sweden": {
-      "win_a": 0.7514,
-      "draw": 0.1614,
-      "win_b": 0.0872,
-      "bookmakers": 25,
-      "commence_time": "2026-06-30T21:00:00Z"
+    "Norway||England": {
+      "win_a": 0.2279,
+      "draw": 0.2578,
+      "win_b": 0.5143,
+      "bookmakers": 23,
+      "commence_time": "2026-07-11T21:00:00Z"
     },
-    "Mexico||Ecuador": {
-      "win_a": 0.4345,
-      "draw": 0.314,
-      "win_b": 0.2515,
+    "Argentina||Switzerland": {
+      "win_a": 0.5579,
+      "draw": 0.269,
+      "win_b": 0.1731,
       "bookmakers": 24,
-      "commence_time": "2026-07-01T01:00:00Z"
-    },
-    "England||DR Congo": {
-      "win_a": 0.748,
-      "draw": 0.1733,
-      "win_b": 0.0787,
-      "bookmakers": 22,
-      "commence_time": "2026-07-01T16:00:00Z"
-    },
-    "Belgium||Senegal": {
-      "win_a": 0.4483,
-      "draw": 0.2939,
-      "win_b": 0.2578,
-      "bookmakers": 24,
-      "commence_time": "2026-07-01T20:00:00Z"
-    },
-    "USA||Bosnia & Herzegovina": {
-      "win_a": 0.701,
-      "draw": 0.1931,
-      "win_b": 0.1059,
-      "bookmakers": 25,
-      "commence_time": "2026-07-02T00:00:00Z"
-    },
-    "Spain||Austria": {
-      "win_a": 0.7512,
-      "draw": 0.1768,
-      "win_b": 0.0719,
-      "bookmakers": 23,
-      "commence_time": "2026-07-02T19:00:00Z"
-    },
-    "Portugal||Croatia": {
-      "win_a": 0.5187,
-      "draw": 0.2781,
-      "win_b": 0.2032,
-      "bookmakers": 23,
-      "commence_time": "2026-07-02T23:00:00Z"
-    },
-    "Switzerland||Algeria": {
-      "win_a": 0.5055,
-      "draw": 0.2687,
-      "win_b": 0.2258,
-      "bookmakers": 23,
-      "commence_time": "2026-07-03T03:00:00Z"
-    },
-    "Australia||Egypt": {
-      "win_a": 0.2918,
-      "draw": 0.325,
-      "win_b": 0.3832,
-      "bookmakers": 25,
-      "commence_time": "2026-07-03T18:00:00Z"
-    },
-    "Argentina||Cape Verde": {
-      "win_a": 0.8385,
-      "draw": 0.1158,
-      "win_b": 0.0457,
-      "bookmakers": 24,
-      "commence_time": "2026-07-03T22:00:00Z"
-    },
-    "Colombia||Ghana": {
-      "win_a": 0.5916,
-      "draw": 0.2583,
-      "win_b": 0.15,
-      "bookmakers": 23,
-      "commence_time": "2026-07-04T01:30:00Z"
+      "commence_time": "2026-07-12T01:00:00Z"
     }
   }
 }

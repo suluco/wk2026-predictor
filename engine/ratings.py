@@ -73,13 +73,22 @@ def retrain_model() -> None:
 
 
 def record_result(match_id: int, home_score: int, away_score: int,
-                  retrain: bool = True, penalty_winner: str = ""):
+                  retrain: bool = True, penalty_winner: str = "",
+                  git_sync: bool = True):
     """
     Verwerk een gespeelde uitslag:
     1. Schrijf naar matches.csv (incl. optionele penalty_winner bij gelijkspel in KO)
     2. Update teamsterktes (attack/defense/form)
     3. Update Elo-ratings
     4. Hertraineer ML-model (alleen als retrain=True)
+    5. Commit + push de gewijzigde bestanden naar git (alleen als git_sync=True) —
+       nodig op Streamlit Cloud waar het filesystem ephemeral is. Gooit
+       GitSyncError bij falen (geen token, conflict, netwerkfout) zodat de
+       aanroeper dit expliciet aan de gebruiker kan tonen i.p.v. de wijziging
+       stilzwijgend te laten verdwijnen bij de volgende container-restart.
+
+       git_sync=False voor batch-gebruik buiten Streamlit (bijv.
+       auto_updater.py), waar losse commits per uitslag niet gewenst zijn.
     """
     from engine.simulator import load_teams
 
@@ -117,3 +126,18 @@ def record_result(match_id: int, home_score: int, away_score: int,
     if retrain:
         print("✓ ML-model hertrainen...")
         retrain_model()
+
+    # 5. Persisteren naar git (ephemeral filesystem op Streamlit Cloud)
+    if git_sync:
+        from engine.git_sync import git_commit_and_push, timestamp
+
+        changed_files = ["data/matches.csv", "data/teams.csv", "data/elo_ratings.csv"]
+        if retrain:
+            changed_files += ["data/model.pkl", "data/scaler.pkl", "data/training_data.csv"]
+
+        print("✓ Wijzigingen committen + pushen...")
+        git_commit_and_push(
+            changed_files,
+            message=f"Uitslag bijgewerkt: {match_id} - {timestamp()}",
+        )
+        print("✓ Gepusht naar git")

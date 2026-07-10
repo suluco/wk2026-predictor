@@ -1,14 +1,14 @@
 team,elo
 Netherlands,1990.2
-France,1981.9
+France,1988.4
 Argentina,1943.7
 Brazil,1926.8
 Spain,1880.2
-Germany,1878.0
-Belgium,1864.8
+Germany,1868.0
+Morocco,1864.9
 Colombia,1863.3
-Morocco,1852.4
-England,1844.0
+England,1853.5
+Belgium,1852.5
 Mexico,1838.0
 Portugal,1829.3
 Norway,1822.2
@@ -16,18 +16,18 @@ Sweden,1806.0
 Croatia,1801.5
 Switzerland,1790.6
 Uruguay,1776.1
+USA,1770.7
+Senegal,1759.8
 Austria,1755.3
 Turkey,1753.6
-USA,1752.0
-Senegal,1747.5
 Ivory Coast,1738.8
 Japan,1737.2
-Bosnia and Herzegovina,1729.9
-Canada,1715.5
+Bosnia and Herzegovina,1711.2
+Canada,1703.0
 Ecuador,1701.1
 Scotland,1697.9
 Algeria,1690.4
-Paraguay,1686.8
+Paraguay,1690.3
 Czechia,1674.2
 Ghana,1673.5
 South Africa,1671.8
@@ -36,7 +36,7 @@ Cape Verde,1662.9
 Egypt,1652.0
 Iran,1646.1
 Australia,1641.5
-DR Congo,1641.0
+DR Congo,1631.5
 Italy,1628.2
 Chile,1621.5
 Russia,1593.2

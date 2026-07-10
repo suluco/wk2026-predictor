@@ -314,12 +314,26 @@ def predict_bracket(resources: dict = None) -> dict:
         r16_winners.append(m["winner"])
         print(f"  {a:<22} vs {b:<22} → {m['score'][0]}-{m['score'][1]} → {m['winner']}")
 
+    # ── Stap 5: Kwartfinales ───────────────────────────────────────────────────
+    # Gebruik officiële fixtures uit matches.csv als die er staan (stage == "QF"),
+    # anders pair sequentieel de R16-winnaars (fallback).
+    qf_fixture_rows = matches_df[matches_df["stage"] == "QF"]
+
+    if len(qf_fixture_rows) >= 4:
+        all_qf_matchups = [
+            (row["home"], row["away"])
+            for _, row in qf_fixture_rows.sort_values("match_id").iterrows()
+        ]
+    else:
+        all_qf_matchups = [
+            (r16_winners[i], r16_winners[i+1] if i+1 < len(r16_winners) else "TBD")
+            for i in range(0, len(r16_winners), 2)
+        ]
+
     print("\n── Kwartfinales ─────────────────────────────")
     qf_matchups = []
     qf_winners  = []
-    for i in range(0, len(r16_winners), 2):
-        a = r16_winners[i]
-        b = r16_winners[i+1] if i+1 < len(r16_winners) else "TBD"
+    for a, b in all_qf_matchups:
         m = play(a, b)
         qf_matchups.append(m)
         qf_winners.append(m["winner"])

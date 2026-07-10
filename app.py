@@ -3,11 +3,12 @@ import pandas as pd
 from pathlib import Path
 from engine.predictor import predict_match, predict_all_upcoming, load_resources
 from engine.ratings import record_result
+from engine.git_sync import git_pull, git_commit_and_push, GitSyncError, timestamp
 
 st.set_page_config(
     page_title="WK 2026 Voorspeller",
     page_icon="⚽",
-    layout="wide",
+    layout="centered",  # mobielvriendelijk — "wide" duwt kolommen te smal op een telefoonscherm
     initial_sidebar_state="collapsed"
 )
 
@@ -49,6 +50,20 @@ FLAGS = {
 def flag(t): return FLAGS.get(t, "🏳️")
 def pbar(pct, color="var(--green)"):
     return f'<div class="prob-bg"><div class="prob-fill" style="width:{pct}%;background:{color}"></div></div>'
+
+@st.cache_resource
+def _startup_git_pull():
+    """
+    Draait precies één keer per container-lifetime (cache_resource), vóór
+    de eerste load_resources(). Haalt de laatste staat van matches.csv/
+    teams.csv/elo_ratings.csv/model.pkl op — nodig omdat Streamlit Cloud een
+    ephemeral filesystem heeft en iemand vanaf een ander device (bijv.
+    mobiel) intussen een uitslag kan hebben ingevoerd en gepusht.
+    """
+    git_pull()
+    return True
+
+_startup_git_pull()
 
 @st.cache_data(ttl=60)
 def get_matches():
@@ -289,16 +304,25 @@ with tab3:
                     key=f"pk_{trow['match_id']}"
                 )
                 if st.form_submit_button("✅ OPSLAAN"):
-                    record_result(int(trow["match_id"]),
-                                  int(trow["home_score"]),
-                                  int(trow["away_score"]),
-                                  penalty_winner=str(pk_winner))
-                    from engine.auto_updater import propagate_knockout_fixtures
-                    propagate_knockout_fixtures()
-                    st.cache_data.clear()
-                    st.cache_resource.clear()
-                    st.success(f"✓ {pk_winner} als winnaar na strafschoppen opgeslagen.")
-                    st.rerun()
+                    try:
+                        record_result(int(trow["match_id"]),
+                                      int(trow["home_score"]),
+                                      int(trow["away_score"]),
+                                      penalty_winner=str(pk_winner))
+                        from engine.auto_updater import propagate_knockout_fixtures
+                        added = propagate_knockout_fixtures()
+                        if added:
+                            git_commit_and_push(
+                                ["data/matches.csv"],
+                                message=f"Knockout fixture toegevoegd - {timestamp()}",
+                            )
+                    except GitSyncError as e:
+                        st.error(f"⚠️ Uitslag is lokaal opgeslagen maar NIET gepersisteerd naar git: {e}")
+                    else:
+                        st.cache_data.clear()
+                        st.cache_resource.clear()
+                        st.success(f"✓ {pk_winner} als winnaar na strafschoppen opgeslagen.")
+                        st.rerun()
 
         st.divider()
 
@@ -343,14 +367,23 @@ with tab3:
             )
 
         if st.button("✅ UITSLAG OPSLAAN & MODEL UPDATEN"):
-            record_result(int(sel_id), int(home_score), int(away_score), penalty_winner=pen_winner)
-            if is_knockout:
-                from engine.auto_updater import propagate_knockout_fixtures
-                propagate_knockout_fixtures()
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            st.success(f"✓ {sel_row['home']} {home_score}–{away_score} {sel_row['away']} opgeslagen. Elo en teamsterktes bijgewerkt.")
-            st.rerun()
+            try:
+                record_result(int(sel_id), int(home_score), int(away_score), penalty_winner=pen_winner)
+                if is_knockout:
+                    from engine.auto_updater import propagate_knockout_fixtures
+                    added = propagate_knockout_fixtures()
+                    if added:
+                        git_commit_and_push(
+                            ["data/matches.csv"],
+                            message=f"Knockout fixture toegevoegd - {timestamp()}",
+                        )
+            except GitSyncError as e:
+                st.error(f"⚠️ Uitslag is lokaal opgeslagen maar NIET gepersisteerd naar git: {e}")
+            else:
+                st.cache_data.clear()
+                st.cache_resource.clear()
+                st.success(f"✓ {sel_row['home']} {home_score}–{away_score} {sel_row['away']} opgeslagen. Elo en teamsterktes bijgewerkt.")
+                st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — Toernooi bracket

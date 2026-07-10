@@ -1,0 +1,21 @@
+# Mobielvriendelijke basisconfiguratie voor Streamlit Community Cloud.
+# Layout ("centered" i.p.v. "wide") en initial_sidebar_state ("collapsed")
+# staan in app.py via st.set_page_config() — dat kan niet via config.toml.
+
+[theme]
+base = "dark"
+primaryColor = "#00C853"
+backgroundColor = "#090909"
+secondaryBackgroundColor = "#111111"
+textColor = "#e8e8e8"
+font = "sans serif"
+
+[server]
+# Streamlit Cloud zet deze zelf bij deploy, maar expliciet zetten voorkomt
+# verrassingen bij lokaal draaien met dezelfde config.
+headless = true
+enableXsrfProtection = true
+maxUploadSize = 5
+
+[browser]
+gatherUsageStats = false

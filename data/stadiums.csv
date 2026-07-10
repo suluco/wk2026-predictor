@@ -9,5 +9,9 @@ match_id_range,city,stadium,lat,lon,altitude_m,timezone,avg_temp_june,avg_humidi
 64-72,Vancouver,BC Place,49.2767,-123.1122,5,America/Vancouver,18,65,CONCACAF
 73-81,Kansas City,Arrowhead Stadium,39.0489,-94.4839,316,America/Chicago,30,70,CONCACAF
 82-90,Atlanta,Mercedes-Benz Stadium,33.7554,-84.4010,298,America/New_York,30,75,CONCACAF
+97-97,Foxborough (Boston),Gillette Stadium,42.0909,-71.2643,50,America/New_York,26,65,CONCACAF
+98-98,Miami Gardens,Hard Rock Stadium,25.9580,-80.2389,3,America/New_York,32,80,CONCACAF
+99-99,Inglewood (Los Angeles),SoFi Stadium,33.9535,-118.3392,89,America/Los_Angeles,26,70,CONCACAF
+100-100,Kansas City,Arrowhead Stadium,39.0489,-94.4839,316,America/Chicago,30,70,CONCACAF
 91-99,Miami,Hard Rock Stadium,25.9580,-80.2389,3,America/New_York,32,80,CONCACAF
 100-104,New York,MetLife Stadium,40.8135,-74.0745,5,America/New_York,26,65,CONCACAF
