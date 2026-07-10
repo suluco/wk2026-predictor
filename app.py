@@ -5,6 +5,8 @@ from engine.predictor import predict_match, predict_all_upcoming, load_resources
 from engine.ratings import record_result
 from engine.git_sync import git_pull, git_commit_and_push, GitSyncError, timestamp
 
+st.write("DEBUG secrets keys:", list(st.secrets.keys()))
+
 st.set_page_config(
     page_title="WK 2026 Voorspeller",
     page_icon="⚽",
