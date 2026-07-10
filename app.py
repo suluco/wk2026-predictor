@@ -281,6 +281,14 @@ with tab3:
 
     matches_df3 = get_matches()
 
+    # Succesmelding overleeft de st.rerun() na het opslaan: st.success() vóór
+    # st.rerun() wordt door de onmiddellijke herstart weggevaagd voordat de
+    # gebruiker hem ziet, dus de boodschap wordt in session_state gezet en na
+    # de rerun hier getoond + meteen weer verwijderd (toont maar één keer).
+    pending_success = st.session_state.pop("result_save_success", None)
+    if pending_success:
+        st.success(pending_success)
+
     # ── Sectie A: strafschoppen invoeren voor gespeeld gelijkspel in KO ───────
     if "penalty_winner" in matches_df3.columns:
         ko_tied = matches_df3[
@@ -321,7 +329,10 @@ with tab3:
                     else:
                         st.cache_data.clear()
                         st.cache_resource.clear()
-                        st.success(f"✓ {pk_winner} als winnaar na strafschoppen opgeslagen.")
+                        msg = f"✅ {pk_winner} als winnaar na strafschoppen opgeslagen en gesynchroniseerd naar GitHub."
+                        if added:
+                            msg += f" {added} nieuwe wedstrijd{'en' if added != 1 else ''} toegevoegd aan de bracket."
+                        st.session_state["result_save_success"] = msg
                         st.rerun()
 
         st.divider()
@@ -369,6 +380,7 @@ with tab3:
         if st.button("✅ UITSLAG OPSLAAN & MODEL UPDATEN"):
             try:
                 record_result(int(sel_id), int(home_score), int(away_score), penalty_winner=pen_winner)
+                added = 0
                 if is_knockout:
                     from engine.auto_updater import propagate_knockout_fixtures
                     added = propagate_knockout_fixtures()
@@ -382,7 +394,10 @@ with tab3:
             else:
                 st.cache_data.clear()
                 st.cache_resource.clear()
-                st.success(f"✓ {sel_row['home']} {home_score}–{away_score} {sel_row['away']} opgeslagen. Elo en teamsterktes bijgewerkt.")
+                msg = f"✅ {sel_row['home']} {home_score}–{away_score} {sel_row['away']} opgeslagen en gesynchroniseerd naar GitHub."
+                if added:
+                    msg += f" {added} nieuwe wedstrijd{'en' if added != 1 else ''} toegevoegd aan de bracket."
+                st.session_state["result_save_success"] = msg
                 st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
