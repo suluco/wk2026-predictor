@@ -1,10 +1,10 @@
 team,fifa_rank,attack,defense,form,wc_appearances,avg_goals_scored,avg_goals_conceded,confederation
 Argentina,1,2.0703,0.6458,0.865,18,1.71,0.89,CONMEBOL
 France,2,2.1286,0.5097,0.9671,16,1.65,0.85,UEFA
-Spain,3,1.7296,0.5452,0.7272,16,1.6,0.78,UEFA
+Spain,3,1.6363,0.5,0.809,16,1.6,0.78,UEFA
 England,4,1.7128,0.8097,0.8104,16,1.45,0.95,UEFA
 Brazil,5,1.9411,0.6719,0.8413,22,1.68,0.82,CONMEBOL
-Portugal,6,1.7772,0.661,0.5896,8,1.52,0.91,UEFA
+Portugal,6,1.5639,0.696,0.4127,8,1.52,0.91,UEFA
 Netherlands,7,1.9738,0.9989,0.7152,11,1.55,0.92,UEFA
 Germany,8,1.8044,1.0133,0.5002,20,1.72,0.95,UEFA
 Belgium,9,1.7534,1.0617,0.5732,14,1.38,0.98,UEFA

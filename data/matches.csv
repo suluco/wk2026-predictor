@@ -91,7 +91,7 @@ match_id,date,time,group,stage,home,away,home_score,away_score,played,penalty_wi
 90,2026-07-04,23:00,R16,R16,Paraguay,France,0.0,1.0,1,
 91,2026-07-05,22:00,R16,R16,Brazil,Norway,,,0,
 92,2026-07-06,02:00,R16,R16,Mexico,England,,,0,
-93,2026-07-06,21:00,R16,R16,Portugal,Spain,,,0,
+93,2026-07-06,21:00,R16,R16,Portugal,Spain,0.0,1.0,1,
 94,2026-07-07,02:00,R16,R16,USA,Belgium,,,0,
 95,2026-07-07,18:00,R16,R16,Argentina,Egypt,,,0,
 96,2026-07-07,22:00,R16,R16,Switzerland,Colombia,1.0,1.0,1,Switzerland
