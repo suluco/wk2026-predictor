@@ -99,3 +99,4 @@ match_id,date,time,group,stage,home,away,home_score,away_score,played,penalty_wi
 98,2026-07-11,23:00,QF,QF,Norway,England,2.0,1.0,1,
 99,2026-07-10,21:00,QF,QF,Spain,Belgium,2.0,1.0,1,
 100,2026-07-12,03:00,QF,QF,Argentina,Switzerland,,,0,
+101,2026-07-15,21:00,SF,SF,France,Norway,,,0,
